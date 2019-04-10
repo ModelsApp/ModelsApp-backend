@@ -1,0 +1,27 @@
+{
+  "name": "dating-react-api",
+  "version": "0.1.0",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "dependencies": {
+    "apn": "^2.2.0",
+    "bcrypt-nodejs": "0.0.3",
+    "cookie-session": "^2.0.0-beta.3",
+    "cors": "^2.8.5",
+    "dotenv": "^6.2.0",
+    "express": "~4.16.0",
+    "install": "^0.12.2",
+    "jsonwebtoken": "^8.4.0",
+    "moment": "^2.23.0",
+    "mongodb": "^3.1.10",
+    "nodemon": "^1.18.10",
+    "npm": "^6.5.0",
+    "passport": "^0.4.0",
+    "passport-facebook": "^2.1.1",
+    "passport-google-oauth20": "^1.0.0",
+    "passport-instagram": "^1.0.0",
+    "passport-jwt": "^4.0.0",
+    "passport-local": "^1.0.0"
+  }
+}
