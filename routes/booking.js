@@ -244,7 +244,6 @@ module.exports = function(app) {
             },
         
           ]).toArray(function(err, docs) {
-            console.log(docs);
             if (err) {
               res.json({message: "No such intervals"});
             } else {

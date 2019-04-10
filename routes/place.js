@@ -69,16 +69,8 @@ module.exports = function (app) {
   app.put('/api/place/:id', function (req, res) {
     var id = parseInt(req.params.id);
     var newPlace = req.body.place;
-    var intervals=req.body.intervals
-
-    //fetch time inteerval with calling method
-    const intervaldata = getIntervalData(id, res);
-
-
+    var intervals=req.body.intervals;
     Place.findOne({ _id: id }, function (err, place) {
-      intervaldata.then(function (value) {
-       
-        });
       err && console.log(err);
       if (!place) {
         res.json({ message: "No such place" });
@@ -219,9 +211,6 @@ async function getMoreData(places, res) {
       place.minOffer = offers[0]['price'];
     }
     if (interval) {
-      // for (var i = 0; i < interval.intervals.length; i++) {
-      //   interval.intervals[i].slot = place.slots;
-      // }
       place.intervals = interval.intervals;
 
     }
@@ -231,20 +220,4 @@ async function getMoreData(places, res) {
   }));
   res.json(full);
 }
-async function getIntervalData(place, res) {
 
-  var interval = await Interval.findOne({ place: place });
-  console.log(interval)
-
-
-  if (interval) {
-    // for (var i = 0; i < interval.intervals.length; i++) {
-    //   interval.intervals[i].slot = place.slots;
-    // }
-    place.intervals = interval.intervals;
-
-  }
-
-  return interval;
-  res.json(full);
-}
