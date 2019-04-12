@@ -41,6 +41,9 @@ require('./routes')(app);
 var functions = require('./config/intervalFunctions');
 
 functions.checkBookingExpired(db);
+app.get('/*', function(req,res){
+  res.json({messsage:"noo"});
+});
 
 var PORT = process.env.PORT || 3000;
 
