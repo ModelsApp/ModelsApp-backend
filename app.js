@@ -11,7 +11,8 @@ var corsOptions = {
   "origin": "*",
   "methods": "GET,PUT,POST,DELETE",
   "allowedHeaders": "Content-Type, Authorization, Content-Length, X-Requested-With"
-};
+};  
+// Procfile web:node app.js
 
 app.use(cors(corsOptions));
 
@@ -45,7 +46,7 @@ app.get('/', function(req,res){
   res.json({messsage:"noo"});
 });
 
-var PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, '0.0.0.0', function () {
   console.log('Everything is ill right on port %d!', PORT) 
