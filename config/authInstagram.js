@@ -11,7 +11,6 @@ db.getInstance(function(p_db) {
 });
 
 module.exports = function(passport) {
-
   passport.use(
     new Strategy(
       {
@@ -21,6 +20,7 @@ module.exports = function(passport) {
         passReqToCallback : true
       },
       async function (req, accessToken, refreshToken, profile, done) {
+        console.log('inside it')
 
         // Only if user is not authenticated
         if(!req.user){
