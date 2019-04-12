@@ -48,7 +48,7 @@ app.get('/', function(req,res){
 var PORT = process.env.PORT || 3000;
 
 app.listen(PORT, '0.0.0.0', function () {
-  console.log('Everything is ill right on port %d!', PORT)
+  console.log('Everything is ill right on port %d!', PORT) 
 });
 
 
