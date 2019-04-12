@@ -41,14 +41,12 @@ require('./routes')(app);
 var functions = require('./config/intervalFunctions');
 
 functions.checkBookingExpired(db);
-app.get('/*', function(req,res){
+app.get('/', function(req,res){
   res.json({messsage:"noo"});
 });
 
-var PORT = process.env.PORT || 3000;
+// var PORT = process.env.PORT || 3000;
 
-app.listen(PORT, '0.0.0.0', function () {
-  console.log('Everything is ill right on port %d!', PORT)
-});
+app.listen( process.env.PORT || 3000);
 
 
