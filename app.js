@@ -42,9 +42,9 @@ var functions = require('./config/intervalFunctions');
 
 functions.checkBookingExpired(db);
 
-var PORT = process.env.PORT || 3000;
+// var PORT = process.env.PORT || 3000;
 
-app.listen(PORT, '0.0.0.0', function () {
+app.listen( process.env.PORT || 3000 ,  function () {
   console.log('Everything is ill right on port %d!', PORT)
 });
 
