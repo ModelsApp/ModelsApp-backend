@@ -136,13 +136,14 @@ module.exports = function(app) {
                   userCampaign = await UserCampaign.findOne({ campaign : id, user: user._id });
     
                   if(userCampaign.images.length < userCampaign.imageCount){
-                    await imageUplader.uploadImage(file.path, 'users', user._id)
+                    await imageUplader.uploadImage(file.path, 'users', user._id, { toPng : true})
                     .then(async (newImage) =>{
                       await UserCampaign.findOneAndUpdate({ campaign : id, user: user._id }, { $push: { images: newImage } })
                       addedImages.push(newImage);
                     })
                     .catch((err) => {
                       console.log(err);
+                      res.status(400).json({message:  'faild'});
                     });
                   }
                 }
