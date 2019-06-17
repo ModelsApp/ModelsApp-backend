@@ -446,7 +446,6 @@ function editUser(id, newUser, res){
       res.json({ message: "No such user" });
     } else {
       
-      if(newUser.registerStep !== user.registerStep && newUser.registerStep) user.registerStep = newUser.registerStep;
       if(newUser.name !== user.name && newUser.name) user.name = newUser.name;
       if(newUser.surname !== user.surname && newUser.surname) user.surname = newUser.surname;
       if(newUser.gender !== user.gender && newUser.gender) user.gender = newUser.gender;
@@ -458,6 +457,7 @@ function editUser(id, newUser, res){
       if(newUser.currentAgency !== user.currentAgency && newUser.currentAgency) user.currentAgency = newUser.currentAgency;
       if(newUser.city !== user.city && newUser.city) user.city = newUser.city;
       if(newUser.instagramName !== user.instagramName && newUser.instagramName) user.instagramName = newUser.instagramName;
+
       // Add a deviceID to the devices array of the User's document
       if(newUser.deviceID) {
         if(user.devices.indexOf(newUser.deviceID) === -1){
