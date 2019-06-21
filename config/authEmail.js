@@ -40,7 +40,8 @@ exports.createUser = async (req, res, next) => {
                 confirmHash : crypto.randomBytes(10).toString('hex'),
                 images: [],
                 mainImage: null,
-                isPaymentRequired: false
+                isPaymentRequired: false,
+                registerStep: 0
             };
 
             newUser.loginTypes.push('email');

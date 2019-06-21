@@ -446,6 +446,7 @@ function editUser(id, newUser, res){
       res.json({ message: "No such user" });
     } else {
       
+      if(newUser.registerStep !== user.registerStep && newUser.registerStep) user.registerStep = newUser.registerStep;
       if(newUser.name !== user.name && newUser.name) user.name = newUser.name;
       if(newUser.surname !== user.surname && newUser.surname) user.surname = newUser.surname;
       if(newUser.gender !== user.gender && newUser.gender) user.gender = newUser.gender;
