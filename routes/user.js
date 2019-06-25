@@ -9,14 +9,16 @@ var imageUplader = require('../lib/imageUplader');
 var multiparty = require('multiparty');
 var pushProvider = require('../lib/pushProvider');
 var path = require('path');
+var entityHelper = require('../lib/entityHelper');
 
-var User, Booking, Offer, Place, OfferPost;
+var User, Booking, Offer, Place, OfferPost, UserPaymentToken;
 db.getInstance(function (p_db) {
   User = p_db.collection('users');
   Offer = p_db.collection('offers');
   Booking = p_db.collection('bookings');
   Place = p_db.collection('places');
   OfferPost = p_db.collection('offerPosts');
+  UserPaymentToken = p_db.collection('userPaymentTokens');
 });
 
 module.exports = function(app) {
@@ -25,6 +27,40 @@ module.exports = function(app) {
   app.get('/api/user/current', middleware.isAuthorized, async function (req, res) {
     var user = await req.user;
     res.json(user);
+  });
+
+  app.post('/api/user/paymentToken', middleware.isAuthorized, async function(req, res){
+    let id = req.body.id;
+    let token = req.body.token;
+    let user = await req.user;
+    if(id && token && user){
+      let userPaymentToken = {
+        _id: await entityHelper.getNewId('userPaymentTokenId'),
+        id: id,
+        token: token,
+        userId: user._id
+      }
+      await UserPaymentToken.insertOne(userPaymentToken);
+      res.status(200).json(await getPaymentTokens(user._id));
+    }else{
+      res.status(400).json({message: "invalid parameters"});
+    }
+  });
+  getPaymentTokens = async (userId) => {
+    let tokens =  await UserPaymentToken.find({userId: userId }).toArray();
+    return tokens.map(x=> {
+      delete x._id;
+      delete x.userId;
+      return x;
+    });
+  }
+  app.get('/api/user/paymentToken', middleware.isAuthorized, async function(req, res){
+    let user =  await req.user;
+    if(user){
+      res.status(200).json(await getPaymentTokens(user._id));
+    }else{
+      res.status(400).json({message: "invalid parameters"});
+    }
   });
 
   // Get specific user
