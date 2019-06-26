@@ -67,7 +67,7 @@ function intervalFuncSendReportBookingEmail (db) {
                   var user = users.find(x=>x._id == booking.user);
                   let line = `booking date: ${ booking.date }, time:  ${booking.startTime }-${booking.endTime },`;
                   if(user){
-                    line += ` user:  ${user.email }, ${user.name } ${user.surname } `;
+                    line += ` user: ${user.charAt(0) }. ${user.surname } `;
                   }
                   listToSend.push(line);
                 });
