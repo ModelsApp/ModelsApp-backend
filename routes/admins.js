@@ -19,13 +19,17 @@ module.exports = function(app) {
   app.put(['/api/admin/model/:id/accept'], async function (req, res) {
     var id = parseInt(req.params.id);
     var level = parseInt(req.body.level) || 4;
+    let isPaymentRequired = req.body.isPaymentRequired;
+    if(isPaymentRequired){
+      await User.findOneAndUpdate({ _id: id }, { $set: { isPaymentRequired: isPaymentRequired }});
+    }
 
     User.findOneAndUpdate({ _id: id }, { $set: { accepted: true, level: level, isAcceptationPending: false }},{new: true}, async function (err, updated) {
       if(err) res.json({ message: "error" });
       if(updated.value !== undefined && updated.value !== null){
         var devices = updated.value.devices;
 
-        pushProvider.userAcceptNotification(devices)
+        pushProvider.userAcceptNotification(devices, isPaymentRequired)
         .then(async (x) =>{
           await sendgrid.sendUserAcceptedMail(updated.value.email, req);
           res.json({ message: "The model has been accepted" });
