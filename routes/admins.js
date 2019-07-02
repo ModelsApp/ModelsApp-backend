@@ -66,7 +66,7 @@ module.exports = function(app) {
   app.put(['/api/admin/model/:id/payment'], async function (req, res) {
     var id = parseInt(req.params.id);
     let isPaymentRequired = req.body.isPaymentRequired;
-    if(id && Boolean(isPaymentRequired)){
+    if(id && typeof isPaymentRequired === "boolean"){
       let user =  await User.findOne({_id: id});
       if(user){
         await User.findOneAndUpdate({_id: id}, {$set: { isPaymentRequired : isPaymentRequired }});
