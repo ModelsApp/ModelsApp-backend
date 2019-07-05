@@ -62,7 +62,25 @@ module.exports = function(app) {
       res.status(400).json({message: "invalid parameters"});
     }
   });
-  
+  app.get('/api/user/paymentStatus', middleware.isAuthorized, async function(req, res){
+    let user =  await req.user;
+    if(user){
+      res.status(200).json({ isPaymentRequired: user.isPaymentRequired });
+    }else{
+      res.status(400).json({message: "invalid parameters"});
+    }
+  });
+  app.put('/api/user/paymentStatus', middleware.isAuthorized, async function(req, res){
+    let user =  await req.user;
+    let isPaymentRequired = req.body.isPaymentRequired;
+    if(user){
+      await User.findOneAndUpdate({_id: user._id, $set: { isPaymentRequired: isPaymentRequired }});
+      res.status(200).json({message: 'ok'});
+    }else{
+      res.status(400).json({message: "invalid parameters"});
+    }
+  });
+
   // Get specific user
   app.get('/api/user/:id', function (req, res) {
     var id = parseInt(req.params.id);

@@ -234,6 +234,21 @@ module.exports = function(app) {
     });
   });
   
+  app.get('/api/v2/place', function (req, res) {
+    Place.find({ isActive : true }, { projection: { client: 0 }}).toArray( async function (err, places) {
+      res.status(200).json(places.map(x => {
+         let newPlace = {
+           _id: x._id,
+           mainImage: x.mainImage,
+           address: x.address,
+           type: x.type,
+           name: x.name,
+           location: x.location.coordinates
+         }
+         return newPlace;
+       }));
+    });
+  });
   // Get all Places
   app.get('/api/place', function (req, res) {
     Place.find({ isActive : true }, { projection: { client: 0 }}).toArray( async function (err, places) {
