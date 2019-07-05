@@ -234,7 +234,7 @@ module.exports = function(app) {
     });
   });
   
-  app.get('/api/v2/place', function (req, res) {
+  app.get('/api/v2/place', middleware.isAuthorized, function (req, res) {
     Place.find({ isActive : true }, { projection: { client: 0 }}).toArray( async function (err, places) {
       res.status(200).json(places.map(x => {
          let newPlace = {
