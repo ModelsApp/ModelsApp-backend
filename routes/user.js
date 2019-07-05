@@ -62,7 +62,7 @@ module.exports = function(app) {
       res.status(400).json({message: "invalid parameters"});
     }
   });
-
+  
   // Get specific user
   app.get('/api/user/:id', function (req, res) {
     var id = parseInt(req.params.id);

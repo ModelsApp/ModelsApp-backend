@@ -306,11 +306,12 @@ module.exports = function(app) {
     }
     let week = fullDate.isoWeek();
     let year = fullDate.year();
-    let usersBookings = await Booking.countDocuments({ user: user._id, year: year , week: week, place : place._id });
+    let usersBookingsWeek = await Booking.countDocuments({ user: user._id, year: year , week: week });
+    let usersBookingsWeekPlace = await Booking.countDocuments({ user: user._id, year: year , week: week, place : place._id });
     let usersBookingsSamePlaceDate = await Booking.countDocuments({ user: user._id, place: place._id, date: {$eq: fullDate.format('DD-MM-YYYY')}  });
 
     if(usersBookingsSamePlaceDate == 0){
-      if(place.type.toLowerCase() == 'gym' || (place.type.toLowerCase() != 'gym' && usersBookings < 3)){
+      if(place.type.toLowerCase() == 'gym' || (place.type.toLowerCase() != 'gym' && usersBookingsWeek < 10 && usersBookingsWeekPlace < 3)){
         let minOfferPrice =  Math.min(...offers.map(x => x.price)) / 2;
         if(minOfferPrice <= user.credits){
           validation.isValid = true;
