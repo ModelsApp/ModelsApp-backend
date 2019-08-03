@@ -20,7 +20,6 @@ function generateUserToken(req, res) {
 }
 
 module.exports = function (app) {
-
   // Instagram authentication
   app.get(
     '/auth/instagram',

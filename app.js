@@ -44,6 +44,7 @@ require('./routes/samplePost')(app);
 require('./routes/campains/campaigns')(app);
 require('./routes/campains/userCampaigns')(app);
 require('./routes/campains/campaignsIntervals')(app);
+require('./routes/facebook')(app);
 
 var functions = require('./config/intervalFunctions');
 
