@@ -432,11 +432,11 @@ module.exports = function(app) {
       if(offer && booking){
         var form = new multiparty.Form();
         await form.parse(req, async function (err, fields, files) {
-          let actionId = fields.actionId[0];
+          let actionId = fields.actionId ? fields.actionId[0] : null;
           let dbOfferPost = await OfferPost.findOne({offer: offerId, booking: bookingId, actionId: actionId});
           let bookingAction = booking.actions.filter(x=>x.offerId == offer._id)[0];
           let foundedBookingAction;
-          if(bookingAction){
+          if(actionId && bookingAction){
             foundedBookingAction = await getBookingAction(actionId, bookingAction.actions);
             if(foundedBookingAction && ( !dbOfferPost || foundedBookingAction.maxAttempts - foundedBookingAction.attempts > 0)){
               foundedBookingAction.attempts = foundedBookingAction.attempts + 1;
