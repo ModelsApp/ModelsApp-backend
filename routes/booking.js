@@ -475,7 +475,7 @@ module.exports = function(app) {
 
                   if(validateInterval.free > 0){
                     if (await userBookingsLimitReached(user, place)) {
-                      return res.status(403).json({ message: 'User has exceeded his monthly bookings limit' });
+                      return res.status(403).json({ message: 'User has exceeded his bookings limit' });
                     }
                     if (!(await userCanBook(user, place))) {
                       return res.status(403).json({ message: `User's subscription plan is insufficient for this venue` });
