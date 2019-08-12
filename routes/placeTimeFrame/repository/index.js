@@ -1,5 +1,5 @@
 const newPlaceExtraRepository = (model) => ({
-  updateOrCreate({ type, name, image }) {
+  updateOrCreate({ type, name }) {
     return new Promise((resolve, reject) => {
       model.findOneAndUpdate(
         {
@@ -7,11 +7,7 @@ const newPlaceExtraRepository = (model) => ({
           name,
         },
         {
-          $set: {
-            type,
-            name,
-            ...(image && { image }),
-          }
+          $set: { type, name }
         },
         {
           returnOriginal: false,
@@ -27,25 +23,21 @@ const newPlaceExtraRepository = (model) => ({
     });
   },
 
-  find: ({ id, name, type }, options) => {
+  find: ({ id, type, name }, options) => {
     return new Promise((resolve, reject) => {
       model.find(
         {
         ...(id && { _id: id }),
+        ...(type && { type }),
         ...(name && { name }),
-        ...(type && { type })
         },
-        options
-      ).toArray((err, actionPoints) => {
+        options,
+      ).toArray((err, timeFrames) => {
           if (err) reject(err);
-          resolve(actionPoints);
+          resolve(timeFrames);
         });
       });
   },
-
-  findOne: (name) => {
-    return model.findOne({ name });
-  }
 });
 
 module.exports = newPlaceExtraRepository;

@@ -1,7 +1,7 @@
 const newPostSchema = require('./schema');
 
-module.exports = (app, placeExtraRepository, placeTypeRepository, validate) => {
-  app.put('/api/place-extra', async (req, res) => {
+module.exports = (app, placeTimeFrameRepository, placeTypeRepository, validate) => {
+  app.put('/api/place-time-frame', async (req, res) => {
     const validTypes = (await placeTypeRepository.find({}, { projection: { type: 1 } }))
       .map(placeType => placeType.type);
     const validation = validate(req.body, newPostSchema(validTypes));
@@ -9,11 +9,11 @@ module.exports = (app, placeExtraRepository, placeTypeRepository, validate) => {
       return res.status(400).json({ message: validation.error });
     }
 
-    const { type, name, image } = req.body;
+    const { type, name } = req.body;
     let result;
 
     try {
-      result = await placeExtraRepository.updateOrCreate(type, name, image);
+      result = await placeTimeFrameRepository.updateOrCreate({ type, name });
     } catch (error) {
       return res.status(500).json({ message: 'Something went wrong' });
     }
@@ -21,11 +21,11 @@ module.exports = (app, placeExtraRepository, placeTypeRepository, validate) => {
     return res.status(200).send(result.value);
   });
 
-  app.get('/api/place-extra', async (req, res) => {
-    const { id, name, type } = req.query;
+  app.get('/api/place-time-frame', async (req, res) => {
+    const { id, type, name } = req.query;
     let result;
     try {
-      result = await placeExtraRepository.find({ id, name, type });
+      result = await placeTimeFrameRepository.find({ id, type, name });
     } catch (error) {
       return res.status(500).json({ message: 'Something went wrong' });
     }

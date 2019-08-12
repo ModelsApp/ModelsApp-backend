@@ -1,6 +1,7 @@
 const Joi = require('@hapi/joi');
 
-const daySchedule = { start: Joi.number().strict().min(0), end: Joi.number().strict().max(24) };
+const daySchedule = Joi.string().strict();
+const dayTimeFrame = Joi.array().items(Joi.string());
 
 const newSchema = (validTypes, validExtras) => Joi.object().keys({
   name: Joi.string().strict().required(),
@@ -19,18 +20,27 @@ const newSchema = (validTypes, validExtras) => Joi.object().keys({
   level: Joi.number().required(),
   description: Joi.string().required(),
   schedule: Joi.object().required().keys({
-    monday: Joi.object().keys(daySchedule),
-    tuesday: Joi.object().keys(daySchedule),
-    wednesday: Joi.object().keys(daySchedule),
-    thursday: Joi.object().keys(daySchedule),
-    friday: Joi.object().keys(daySchedule),
-    saturday: Joi.object().keys(daySchedule),
-    sunday: Joi.object().keys(daySchedule),
+    monday: daySchedule,
+    tuesday: daySchedule,
+    wednesday: daySchedule,
+    thursday: daySchedule,
+    friday: daySchedule,
+    saturday: daySchedule,
+    sunday: daySchedule,
   }),
   slots: Joi.number().required(),
   extra: Joi.array().items(
     Joi.string().strict().valid(validExtras),
   ),
+  timeFrames: Joi.object().keys({
+    monday: dayTimeFrame,
+    tuesday: dayTimeFrame,
+    wednesday: dayTimeFrame,
+    thursday: dayTimeFrame,
+    friday: dayTimeFrame,
+    saturday: dayTimeFrame,
+    sunday: dayTimeFrame,
+  }),
 });
 
 module.exports = newSchema;

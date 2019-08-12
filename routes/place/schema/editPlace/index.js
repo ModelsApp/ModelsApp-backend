@@ -2,7 +2,8 @@ const Joi = require('@hapi/joi');
 const { ACCESS } = require('./../../constant');
 const { GENDERS } = require('./../../../user/constant');
 
-const daySchedule = { start: Joi.number().strict().min(0), end: Joi.number().strict().max(24) };
+const daySchedule = Joi.string().strict();
+const dayTimeFrame = Joi.array().items(Joi.string());
 
 const newSchema = (validTypes, validExtras) => Joi.object().keys({
   isActive: Joi.boolean().strict(),
@@ -25,13 +26,13 @@ const newSchema = (validTypes, validExtras) => Joi.object().keys({
   level: Joi.number().integer(),
   description: Joi.string(),
   schedule: Joi.object().keys({
-    monday: Joi.object().keys(daySchedule),
-    tuesday: Joi.object().keys(daySchedule),
-    wednesday: Joi.object().keys(daySchedule),
-    thursday: Joi.object().keys(daySchedule),
-    friday: Joi.object().keys(daySchedule),
-    saturday: Joi.object().keys(daySchedule),
-    sunday: Joi.object().keys(daySchedule),
+    monday: daySchedule,
+    tuesday: daySchedule,
+    wednesday: daySchedule,
+    thursday: daySchedule,
+    friday: daySchedule,
+    saturday: daySchedule,
+    sunday: daySchedule,
   }),
   slots: Joi.number().integer(),
   extra: Joi.array().items(
@@ -39,6 +40,15 @@ const newSchema = (validTypes, validExtras) => Joi.object().keys({
   ),
   access: Joi.string().strict().valid(Object.values(ACCESS)),
   allows: Joi.array().items(Joi.string().valid(Object.values(GENDERS))),
+  timeFrames: Joi.object().keys({
+    monday: dayTimeFrame,
+    tuesday: dayTimeFrame,
+    wednesday: dayTimeFrame,
+    thursday: dayTimeFrame,
+    friday: dayTimeFrame,
+    saturday: dayTimeFrame,
+    sunday: dayTimeFrame,
+  }),
 });
 
 module.exports = newSchema;

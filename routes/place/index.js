@@ -23,7 +23,7 @@ db.getInstance(function (p_db) {
   SamplePost = p_db.collection('sampleposts');
 });
 
-module.exports = (app, placeRepository, placeTypeRepository, placeExtraRepository, validate) => {
+module.exports = (app, placeRepository, placeTypeRepository, placeExtraRepository, placeTimeFramesRepository, validate) => {
   app.get('/api/place/:id/daysOffs', async (req, res) => {
     var id = parseInt(req.params.id);
       if(id){
@@ -38,20 +38,6 @@ module.exports = (app, placeRepository, placeTypeRepository, placeExtraRepositor
       }
   });
 
-  /* migrate place schedules on production */
-  /*
-  app.get('/api/place/migrate', async (req, res) => {
-    await Place.updateMany({ }, { $set: { schedule: {
-      monday: { start: 8, end: 20 },
-      tuesday: { start: 8, end: 20 },
-      wednesday: { start: 8, end: 20 },
-      thursday: { start: 8, end: 20 },
-      friday: { start: 8, end: 20 },
-    }}});
-    res.send('ok');
-  });
-  */
-
   /* migrate places allows field */
   /*
   app.get('/api/place/migrate', async (req, res) => {
@@ -59,6 +45,11 @@ module.exports = (app, placeRepository, placeTypeRepository, placeExtraRepositor
     res.send('ok');
   });
   */
+
+  function timeFramesValid(validTimeFrames, timeFrames) {
+    return Object.values(timeFrames)
+      .every((daytimeFrames) => daytimeFrames.every(timeFrame => validTimeFrames.includes(timeFrame)));
+  }
 
   // New Place
   app.post('/api/place', async (req, res) => {
@@ -69,6 +60,14 @@ module.exports = (app, placeRepository, placeTypeRepository, placeExtraRepositor
     const validation = validate(req.body, newPostPlaceSchema(validTypes, validExtras));
     if (validation.error) {
       return res.status(400).json({ message: validation.error });
+    }
+
+    const { timeFrames } = req.body;
+    const validTimeFrames = (await placeTimeFramesRepository.find({ type: req.body.type }))
+      .map(placeTimeFrame => placeTimeFrame.name);
+    if (timeFrames && !timeFramesValid(validTimeFrames, timeFrames)) {
+      return res.status(400)
+        .json({ message: `Invalid time frames! Valid values for type ${req.body.type} are ${validTimeFrames || '[]'}` });
     }
 
     const place = {
@@ -107,6 +106,7 @@ module.exports = (app, placeRepository, placeTypeRepository, placeExtraRepositor
       isActive: true,
       access: ACCESS.basic,
       allows: Object.values(GENDERS),
+      timeFrames: req.body.timeFrames || {},
     };
 
     const seq = await Counter.findOneAndUpdate(
@@ -140,7 +140,7 @@ module.exports = (app, placeRepository, placeTypeRepository, placeExtraRepositor
       return res.status(400).json({ message: validation.error });
     }
 
-    Place.findOne({_id: id }, function (err, place) {
+    Place.findOne({ _id: id }, async (err, place) => {
       err && console.log(err);
       if(!place) {
         res.json({ message: "No such place" });
@@ -186,6 +186,15 @@ module.exports = (app, placeRepository, placeTypeRepository, placeExtraRepositor
           if (newPlace.extra) place.extra = newPlace.extra;
           if (newPlace.access) place.access = newPlace.access;
           if (newPlace.allows) place.allows = newPlace.allows;
+          if (newPlace.timeFrames) {
+            const validTimeFrames = (await placeTimeFramesRepository.find({ type: newPlace.type || place.type }))
+              .map(placeTimeFrame => placeTimeFrame.name);
+            if (!timeFramesValid(validTimeFrames, newPlace.timeFrames)) {
+              return res.status(400)
+                .json({ message: `Invalid time frames! Valid values for type ${newPlace.type || place.type} are ${validTimeFrames || '[]'}` });
+            }
+            place.timeFrames = newPlace.timeFrames;
+          }
 
           Place.replaceOne({_id: id }, place, function () {
             res.json({ message: "Place updated" });
@@ -298,18 +307,13 @@ module.exports = (app, placeRepository, placeTypeRepository, placeExtraRepositor
       && timeFrame.tf
       && timeFrame.day
     ) {
-      const tf = TIME_FRAMES[timeFrame.tf.toLowerCase()];
-      const day = timeFrame.day.toLowerCase();
-      if (tf) {
-        query[`schedule.${day}.start`] = { $lte: tf.start };
-        query[`schedule.${day}.end`] = { $gte: tf.end };
-      }
+      query[`timeFrames.${timeFrame.day.toLowerCase()}`] = timeFrame.tf;
     }
 
     return query;
   }
   
-  app.get('/api/v2/place', middleware.isAuthorized, async (req, res) => {
+  app.get('/api/v2/place', async (req, res) => {
     const { typology, timeFrame, extra } = req.query;
     const query = await getPlaceQuery(typology, timeFrame, extra);
 
@@ -327,7 +331,7 @@ module.exports = (app, placeRepository, placeTypeRepository, placeExtraRepositor
   });
 
   // Get all Places
-  app.get('/api/place', async (req, res) => {
+  app.get('/api/place', middleware.isAuthorized, async (req, res) => {
     const { typology, timeFrame, extra } = req.query;
     const query = await getPlaceQuery(typology, timeFrame, extra);
 

@@ -14,13 +14,15 @@ const newUserRepository = require('./routes/user/repository');
 const newPlaceRepository = require('./routes/place/repository');
 const newPlaceTypeRepository = require('./routes/placeType/repository');
 const newPlaceExtraRepository = require('./routes/placeExtra/repository');
+const newPlaceTimeFrameRepository = require('./routes/placeTimeFrame/repository');
 const functions = require('./config/intervalFunctions');
 
 async function bootstrap() {
   Sentry.init({ dsn: config.sentryUrl });
   await new Promise((resolve, reject) => db.initPool(() => resolve()));
  
-  let User, Place, Offer, Counter, Booking, OfferPost, Interval, SamplePost, ActionPoints, PlaceType, PlaceExtra;
+  let User, Place, Offer, Counter, Booking, PlaceTimeFrame,
+    OfferPost, Interval, SamplePost, ActionPoints, PlaceType, PlaceExtra;
   await new Promise((resolve) => {
     db.getInstance((p_db) => {
       User = p_db.collection('users');
@@ -34,6 +36,7 @@ async function bootstrap() {
       ActionPoints = p_db.collection('actionPoints');
       PlaceType = p_db.collection('placeTypes');
       PlaceExtra = p_db.collection('placeExtras');
+      PlaceTimeFrame = p_db.collection('placeTimeFrame');
       resolve();
     });
   });
@@ -63,6 +66,7 @@ async function bootstrap() {
     newPlaceRepository(Place),
     newPlaceTypeRepository(PlaceType),
     newPlaceExtraRepository(PlaceExtra),
+    newPlaceTimeFrameRepository(PlaceTimeFrame),
     newValidator(),
   );
   require('./routes/statistics')(app);
@@ -75,7 +79,18 @@ async function bootstrap() {
   require('./routes/config')(app);
   require('./routes/actionPoints')(app, newActionPointsRepository(ActionPoints), newValidator());
   require('./routes/placeType')(app, newPlaceTypeRepository(PlaceType), newValidator());
-  require('./routes/placeExtra')(app, newPlaceExtraRepository(PlaceExtra), newValidator());
+  require('./routes/placeExtra')(
+    app,
+    newPlaceExtraRepository(PlaceExtra),
+    newPlaceTypeRepository(PlaceType),
+    newValidator(),
+  );
+  require('./routes/placeTimeFrame')(
+    app,
+    newPlaceTimeFrameRepository(PlaceTimeFrame),
+    newPlaceTypeRepository(PlaceType),
+    newValidator(),
+  );
 
   functions.checkBookingExpired(db);
   functions.sendReportBookingEmail(db);
