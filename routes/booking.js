@@ -6,7 +6,7 @@ const db = require('../config/connection');
 const sendGrid = require('../lib/sendGrid');
 const entityHelper = require('../lib/entityHelper');
 const { SUBSCRIPTION, SUBSCRIPTION_BOOKING_LIMITS } = require('./../config/constant');
-const { ACCESS } = require('./place/constant');
+const { ACCESS, BOOKING_LIMIT_PERIODS } = require('./place/constant');
 
 const calculateOfferPoints = require('./actionPoints/calculator/offer');
 
@@ -331,22 +331,8 @@ module.exports = function(app) {
     })
   });
 
-  async function userBookingsLimitReached(user) {
-    if (user._id = 295) {
-      user.subscriptionPlan.subscription = 'Basic';
-    }
-    const startMonth = moment.utc().startOf('month').toISOString();
-    const endMonth = moment.utc().endOf('month').toISOString();
-    const recentUserBookings = await Booking.find({
-      user: user._id,
-      creationDate: {
-        $gte: startMonth,
-        $lt: endMonth,
-      },
-    }).toArray();
-
-    const numBookings = recentUserBookings.length;
-    switch(user.subscriptionPlan.subscription) {
+  function subscriptionLimitReached(numBookings, user) {
+    switch (user.subscriptionPlan.subscription) {
       case SUBSCRIPTION.trial: {
         if (numBookings >= SUBSCRIPTION_BOOKING_LIMITS.trial) {
           return true;
@@ -365,8 +351,69 @@ module.exports = function(app) {
       case SUBSCRIPTION.unlimited: {
         return false;
       }
-      default: return false;
     }
+  }
+
+  async function venueLimitReached(recentUserBookings, place, user) {
+    let numBookings;
+    if (!place.bookingLimits) {
+      return false;
+    }
+    const userLevel = user.level || 1;
+    let levelBookingLimit = place.bookingLimits[userLevel];
+    if (!levelBookingLimit) {
+      const definedLevels = Object.entries(place.bookingLimits).sort(([k, v], [k2, v2]) => parseInt(k) - parseInt(k2));
+      const firstLargerPair = definedLevels.find(k => parseInt(k[0]) > userLevel);
+      const firstLarger = firstLargerPair ? firstLargerPair[0] : null;
+      const firstSmallerPair = definedLevels.reverse().find(k => parseInt(k[0]) < userLevel);
+      const firstSmaller = firstSmallerPair ? firstSmallerPair[0] : null;
+      if (firstLarger && firstSmaller) {
+        levelBookingLimit = place.bookingLimits[firstSmaller];
+      } else if (firstLarger) {
+        levelBookingLimit = place.bookingLimits[firstLarger];
+      } else if (firstSmaller) {
+        levelBookingLimit = place.bookingLimits[firstSmaller];
+      } else {
+        return false;
+      }
+    }
+    if (!place.bookingLimitsPeriod || place.bookingLimitsPeriod === BOOKING_LIMIT_PERIODS.week) {
+      const recentWeekUserVenueBookings = await Booking.find({
+        user: user._id,
+        creationDate: {
+          $gte: moment.utc().subtract({ days: 7 }).toISOString(),
+        },
+      }).toArray();
+      numBookings = recentWeekUserVenueBookings.filter(booking => booking.place === place._id).length;
+    } else {
+      numBookings = recentUserBookings.filter(booking => booking.place === place._id).length;
+    }
+    if (numBookings >= levelBookingLimit) {
+      return true;
+    }
+
+    return false;
+  }
+
+  async function userBookingsLimitReached(user, place) {
+    // user can reach limit in two ways, he exceeded his monthly subscription bookings limit
+    // or he exceeded his bookings limit for given venue
+    const startMonth = moment.utc().startOf('month').toISOString();
+    const endMonth = moment.utc().endOf('month').toISOString();
+    const recentUserBookings = await Booking.find({
+      user: user._id,
+      creationDate: {
+        $gte: startMonth,
+        $lt: endMonth,
+      },
+    }).toArray();
+
+    let numBookings = recentUserBookings.length;
+    if (subscriptionLimitReached(numBookings, user) || await venueLimitReached(recentUserBookings, place, user)) {
+      return true;
+    }
+
+    return false;
   }
 
   async function userCanBook(user, place) {
@@ -427,7 +474,7 @@ module.exports = function(app) {
                   let validateInterval = await validateIntervalSlots(choosenInterval, fullDate, place);
 
                   if(validateInterval.free > 0){
-                    if (await userBookingsLimitReached(user)) {
+                    if (await userBookingsLimitReached(user, place)) {
                       return res.status(403).json({ message: 'User has exceeded his monthly bookings limit' });
                     }
                     if (!(await userCanBook(user, place))) {
@@ -456,7 +503,7 @@ module.exports = function(app) {
                     $inc: { credits: parseInt(-1 * newBooking.payed) }
                   });
                   await sendBookingEmailMessage(place, newBooking);
-                  res.status(200).json({message: "Booked"});
+                  return res.status(200).json({ message: 'Booked' });
                 }else{
                   res.status(400).json({message:  'not enaught slots'});
                 }
@@ -581,7 +628,7 @@ module.exports = function(app) {
     if (!placeAllowsUserGender(p, user)) {
       return res.status(403).json({ message: `Venue does not accept user's gender` });
     }
-    if (await userBookingsLimitReached(user)) {
+    if (await userBookingsLimitReached(user, p)) {
       return res.status(403).json({ message: 'User has exceeded his monthly bookings limit' });
     }
     if (!(await userCanBook(user, p))) {

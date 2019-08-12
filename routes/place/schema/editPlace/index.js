@@ -1,6 +1,8 @@
 const Joi = require('@hapi/joi');
+
 const { ACCESS } = require('./../../constant');
 const { GENDERS } = require('./../../../user/constant');
+const { BOOKING_LIMIT_PERIODS } = require('./../../constant');
 
 const daySchedule = Joi.string().strict();
 const dayTimeFrame = Joi.array().items(Joi.string());
@@ -49,6 +51,8 @@ const newSchema = (validTypes, validExtras) => Joi.object().keys({
     saturday: dayTimeFrame,
     sunday: dayTimeFrame,
   }),
+  bookingLimits: Joi.object().pattern(/^\d+$/, Joi.number().integer().strict()),
+  bookingLimitsPeriod: Joi.string().strict().valid(Object.values(BOOKING_LIMIT_PERIODS)),
 });
 
 module.exports = newSchema;

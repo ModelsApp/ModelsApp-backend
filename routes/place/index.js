@@ -8,8 +8,9 @@ const imageUplader = require('../../lib/imageUplader');
 const entityHelper = require('../../lib/entityHelper');
 const newPostPlaceSchema = require('./schema/postPlace');
 const newEditPlaceSchema = require('./schema/editPlace');
-const { TIME_FRAMES, ACCESS } = require('./constant');
+const { ACCESS } = require('./constant');
 const { GENDERS } = require('./../user/constant');
+const { BOOKING_LIMIT_PERIODS } = require('./constant');
 
 let User, Place, Offer, Counter, Booking, OfferPost, Interval, SamplePost;
 db.getInstance(function (p_db) {
@@ -79,7 +80,7 @@ module.exports = (app, placeRepository, placeTypeRepository, placeExtraRepositor
         type: 'Point',
         coordinates: [parseFloat(req.body.coordinates[0]), parseFloat(req.body.coordinates[1])],
       },
-      socials: req.body.socials ? 
+      socials: req.body.socials ?
         {
           facebook: req.body.socials.facebook || '',
           tripAdvisor: req.body.socials.tripAdvisor || '',
@@ -107,6 +108,8 @@ module.exports = (app, placeRepository, placeTypeRepository, placeExtraRepositor
       access: ACCESS.basic,
       allows: Object.values(GENDERS),
       timeFrames: req.body.timeFrames || {},
+      bookingLimits: req.body.bookingLimits || {},
+      bookingLimitsPeriod: req.body.bookingLimitsPeriod || BOOKING_LIMIT_PERIODS.week,
     };
 
     const seq = await Counter.findOneAndUpdate(
@@ -195,6 +198,8 @@ module.exports = (app, placeRepository, placeTypeRepository, placeExtraRepositor
             }
             place.timeFrames = newPlace.timeFrames;
           }
+          if (newPlace.bookingLimits) place.bookingLimits = newPlace.bookingLimits;
+          if (newPlace.bookingLimitsPeriod) place.bookingLimitsPeriod = newPlace.bookingLimitsPeriod;
 
           Place.replaceOne({_id: id }, place, function () {
             res.json({ message: "Place updated" });

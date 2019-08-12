@@ -1,20 +1,6 @@
-exports.TIME_FRAMES = Object.freeze({
-  breakfast: {
-    start: 6,
-    end: 11,
-  },
-  lunch: {
-    start: 11,
-    end: 17,
-  },
-  aperitif: {
-    start: 10,
-    end: 19,
-  },
-  dinner: {
-    start: 18,
-    end: 24,
-  },
+exports.BOOKING_LIMIT_PERIODS = Object.freeze({
+  week: 'week',
+  month: 'month',
 });
 
 exports.ACCESS = Object.freeze({
