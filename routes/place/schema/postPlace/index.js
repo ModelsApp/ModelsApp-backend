@@ -5,7 +5,7 @@ const { BOOKING_LIMIT_PERIODS } = require('./../../constant');
 const daySchedule = Joi.string().strict();
 const dayTimeFrame = Joi.array().items(Joi.string());
 
-const newSchema = (validTypes, validExtras) => Joi.object().keys({
+const newSchema = (validTypes, validExtras, validCities) => Joi.object().keys({
   name: Joi.string().strict().required(),
   type: Joi.string().strict().required()
     .valid(validTypes),
@@ -45,6 +45,7 @@ const newSchema = (validTypes, validExtras) => Joi.object().keys({
   }),
   bookingLimits: Joi.object().pattern(/^\d+$/, Joi.number().integer().strict()),
   bookingLimitsPeriod: Joi.string().strict().valid(Object.values(BOOKING_LIMIT_PERIODS)),
+  city: Joi.string().strict().valid(validCities).required(),
 });
 
 module.exports = newSchema;

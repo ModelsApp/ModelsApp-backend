@@ -24,7 +24,15 @@ db.getInstance(function (p_db) {
   SamplePost = p_db.collection('sampleposts');
 });
 
-module.exports = (app, placeRepository, placeTypeRepository, placeExtraRepository, placeTimeFramesRepository, validate) => {
+module.exports = (
+  app,
+  placeRepository,
+  placeTypeRepository,
+  placeExtraRepository,
+  placeTimeFramesRepository,
+  cityRepository,
+  validate,
+  ) => {
   app.get('/api/place/:id/daysOffs', async (req, res) => {
     var id = parseInt(req.params.id);
       if(id){
@@ -47,6 +55,14 @@ module.exports = (app, placeRepository, placeTypeRepository, placeExtraRepositor
   });
   */
 
+  /* migrate city field, set all to Milan */
+  /*
+  app.get('/api/place/migrate', async (req, res) => {
+    await Place.updateMany({ }, { $set: { city: 'Milan' } });
+    res.send('ok');
+  });
+  */
+
   function timeFramesValid(validTimeFrames, timeFrames) {
     return Object.values(timeFrames)
       .every((daytimeFrames) => daytimeFrames.every(timeFrame => validTimeFrames.includes(timeFrame)));
@@ -58,7 +74,9 @@ module.exports = (app, placeRepository, placeTypeRepository, placeExtraRepositor
       .map(placeType => placeType.type);
     const validExtras = (await placeExtraRepository.find({}, { projection: { name: 1 } }))
       .map(placeExtra => placeExtra.name);
-    const validation = validate(req.body, newPostPlaceSchema(validTypes, validExtras));
+    const validCities = (await cityRepository.find({}, { projection: { name: 1 } }))
+      .map(city => city.name);
+    const validation = validate(req.body, newPostPlaceSchema(validTypes, validExtras, validCities));
     if (validation.error) {
       return res.status(400).json({ message: validation.error });
     }
@@ -110,6 +128,7 @@ module.exports = (app, placeRepository, placeTypeRepository, placeExtraRepositor
       timeFrames: req.body.timeFrames || {},
       bookingLimits: req.body.bookingLimits || {},
       bookingLimitsPeriod: req.body.bookingLimitsPeriod || BOOKING_LIMIT_PERIODS.week,
+      city: req.body.city,
     };
 
     const seq = await Counter.findOneAndUpdate(
@@ -138,7 +157,9 @@ module.exports = (app, placeRepository, placeTypeRepository, placeExtraRepositor
       .map(placeType => placeType.type);
     const validExtras = (await placeExtraRepository.find({}, { projection: { name: 1 } }))
       .map(placeExtra => placeExtra.name);
-    const validation = validate(newPlace, newEditPlaceSchema(validTypes, validExtras));
+    const validCities = (await cityRepository.find({}, { projection: { name: 1 } }))
+      .map(city => city.name);
+    const validation = validate(newPlace, newEditPlaceSchema(validTypes, validExtras, validCities));
     if (validation.error) {
       return res.status(400).json({ message: validation.error });
     }
@@ -200,6 +221,7 @@ module.exports = (app, placeRepository, placeTypeRepository, placeExtraRepositor
           }
           if (newPlace.bookingLimits) place.bookingLimits = newPlace.bookingLimits;
           if (newPlace.bookingLimitsPeriod) place.bookingLimitsPeriod = newPlace.bookingLimitsPeriod;
+          if (newPlace.city) place.city = newPlace.city;
 
           Place.replaceOne({_id: id }, place, function () {
             res.json({ message: "Place updated" });
@@ -291,7 +313,7 @@ module.exports = (app, placeRepository, placeTypeRepository, placeExtraRepositor
     });
   });
 
-  async function getPlaceQuery(typology, timeFrame, extra) {
+  async function getPlaceQuery(typology, timeFrame, extra, city) {
     const query = { isActive: true };
     if (typology) {
       const placeType = await placeTypeRepository.findOne(typology);
@@ -315,12 +337,16 @@ module.exports = (app, placeRepository, placeTypeRepository, placeExtraRepositor
       query[`timeFrames.${timeFrame.day.toLowerCase()}`] = timeFrame.tf;
     }
 
+    if (city) {
+      query.city = city;
+    }
+
     return query;
   }
   
   app.get('/api/v2/place', async (req, res) => {
-    const { typology, timeFrame, extra } = req.query;
-    const query = await getPlaceQuery(typology, timeFrame, extra);
+    const { typology, timeFrame, extra, city } = req.query;
+    const query = await getPlaceQuery(typology, timeFrame, extra, city);
 
     const places = await placeRepository.find(query, { projection: { client: 0 }});
     const mappedPlaces = places.map(place => ({
@@ -337,8 +363,8 @@ module.exports = (app, placeRepository, placeTypeRepository, placeExtraRepositor
 
   // Get all Places
   app.get('/api/place', middleware.isAuthorized, async (req, res) => {
-    const { typology, timeFrame, extra } = req.query;
-    const query = await getPlaceQuery(typology, timeFrame, extra);
+    const { typology, timeFrame, extra, city } = req.query;
+    const query = await getPlaceQuery(typology, timeFrame, extra, city);
 
     try {
       const places = await placeRepository.find(query, { projection: { client: 0 }});

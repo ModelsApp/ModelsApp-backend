@@ -15,13 +15,14 @@ const newPlaceRepository = require('./routes/place/repository');
 const newPlaceTypeRepository = require('./routes/placeType/repository');
 const newPlaceExtraRepository = require('./routes/placeExtra/repository');
 const newPlaceTimeFrameRepository = require('./routes/placeTimeFrame/repository');
+const newCityRepository = require('./routes/city/repository');
 const functions = require('./config/intervalFunctions');
 
 async function bootstrap() {
   Sentry.init({ dsn: config.sentryUrl });
   await new Promise((resolve, reject) => db.initPool(() => resolve()));
  
-  let User, Place, Offer, Counter, Booking, PlaceTimeFrame,
+  let User, Place, Offer, Counter, Booking, PlaceTimeFrame, City,
     OfferPost, Interval, SamplePost, ActionPoints, PlaceType, PlaceExtra;
   await new Promise((resolve) => {
     db.getInstance((p_db) => {
@@ -37,6 +38,7 @@ async function bootstrap() {
       PlaceType = p_db.collection('placeTypes');
       PlaceExtra = p_db.collection('placeExtras');
       PlaceTimeFrame = p_db.collection('placeTimeFrame');
+      City = p_db.collection('cities');
       resolve();
     });
   });
@@ -67,6 +69,7 @@ async function bootstrap() {
     newPlaceTypeRepository(PlaceType),
     newPlaceExtraRepository(PlaceExtra),
     newPlaceTimeFrameRepository(PlaceTimeFrame),
+    newCityRepository(City),
     newValidator(),
   );
   require('./routes/statistics')(app);
@@ -89,6 +92,11 @@ async function bootstrap() {
     app,
     newPlaceTimeFrameRepository(PlaceTimeFrame),
     newPlaceTypeRepository(PlaceType),
+    newValidator(),
+  );
+  require('./routes/city')(
+    app,
+    newCityRepository(City),
     newValidator(),
   );
 
