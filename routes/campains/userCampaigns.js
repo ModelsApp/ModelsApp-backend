@@ -54,6 +54,7 @@ module.exports = function(app) {
         res.status(404).json({message : "invalid parameters"});
       }
     });
+
     //create new user campaing
     app.post('/api/campaign/:id/join', middleware.isAuthorized,  async (req, res) => {
         let user = await req.user;
@@ -150,50 +151,61 @@ module.exports = function(app) {
         res.status(404).json({message : "invalid parameters"});
       }
     });
-    app.post('/api/campaign/:id/images', middleware.isAuthorized,  async (req,res) => {
-      var id = parseInt(req.params.id);
-      let user = await req.user;
-      if(id && user){
-        var userCampaign = await UserCampaign.findOne({ campaign : id, user: user._id });
-        if(userCampaign){
-          if(moment().isBefore(moment(userCampaign.uploadPicturesTo))){
-            if(userCampaign.isGiftTaken && (userCampaign.status == 1 || userCampaign.status == -2)){
-              var form = new multiparty.Form();
-              form.parse(req, async function (err, fields, files) {
-                if(files){
-                  files = files.images;
-                  var addedImages = [];
-                  for (file of files) {
-                    userCampaign = await UserCampaign.findOne({ campaign : id, user: user._id });
-      
-                    if(userCampaign.images.length < userCampaign.imageCount){
-                      await imageUplader.uploadImage(file.path, 'users', user._id)
-                      .then(async (newImage) =>{
-                        await UserCampaign.findOneAndUpdate({ campaign : id, user: user._id }, { $push: { images: newImage } })
-                        addedImages.push(newImage);
-                      })
-                      .catch((err) => {
-                        console.log(err);
-                      });
-                    }
-                  }
-                  res.status(200).json({message: "ok", images: addedImages});
-                }else{
-                  res.status(400).json({message:  'no files added'});
-                }
-              });
-            }else{
-              res.status(400).json({message : "invalid status" });
-            }
-          }else{
-            res.status(400).json({message : "Time to upload pictures has expired" });
+
+    function parseForm(req) {
+      const form = new multiparty.Form();
+      return new Promise((resolve, reject) => {
+        form.parse(req, async (err, fields, files) => {
+          if (err) {
+            reject(err);
           }
-      }else{
-        res.status(404).json({message : "UserCampaign not found" });
+          resolve({ fields, files });
+        });
+      });
+    }
+
+    app.post('/api/campaign/:id/images', middleware.isAuthorized, async (req, res) => {
+      const id = parseInt(req.params.id);
+      const user = await req.user;
+      user._id = 218;
+      if (!id || !user) {
+        return res.status(404).json({ message : 'One or more parameters is missing' });
       }
-      }else{
-        res.status(404).json({message : "invalid parameters"});
+
+      let userCampaign = await UserCampaign.findOne({ campaign : id, user: user._id });
+      if (!userCampaign) {
+        return res.status(404).json({ message: 'UserCampaign not found' });
+      }
+
+      let formParsed;
+      try {
+        formParsed = await parseForm(req);
+      } catch (error) {
+        return res.status(500).json({ message: 'Internal server error' });
+      }
+
+      let { files } = formParsed;
+      if (!files) {
+        return res.status(400).json({ message: 'No files added' });
+      }
+
+      files = files.images;
+      const addedImages = [];
+      for (file of files) {
+        userCampaign = await UserCampaign.findOne({ campaign : id, user: user._id });
+
+        if (userCampaign.images.length < userCampaign.imageCount) {
+          try {
+            const newImage = await imageUplader.uploadImage(file.path, 'users', user._id);
+            await UserCampaign.findOneAndUpdate({ campaign : id, user: user._id }, { $push: { images: newImage } });
+            addedImages.push(newImage);
+          } catch (err) {
+            console.error(err);
+          }
         }
+      }
+
+      return res.status(200).json({ message: 'ok', images: addedImages });
     });
 
 
