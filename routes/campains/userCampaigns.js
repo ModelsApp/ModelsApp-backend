@@ -167,7 +167,6 @@ module.exports = function(app) {
     app.post('/api/campaign/:id/images', middleware.isAuthorized, async (req, res) => {
       const id = parseInt(req.params.id);
       const user = await req.user;
-      user._id = 218;
       if (!id || !user) {
         return res.status(404).json({ message : 'One or more parameters is missing' });
       }
