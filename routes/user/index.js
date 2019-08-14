@@ -185,8 +185,8 @@ module.exports = (app, validate) => {
     let newToken = req.body.newToken;
     let oldToken = req.body.oldToken;
     if(id){
-      let user =  await User.findOne({ _id: id });
-      if(user){
+      let user = await User.findOne({ _id: id });
+      if(user && user.devices){
         let foundDevices  = user.devices.filter(x => {
           if((typeof x === Object || typeof x == 'object') && x.type.toLowerCase() == 'android' && x.uid == uid) return true;
           else return false;

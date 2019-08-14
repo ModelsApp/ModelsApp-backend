@@ -6,6 +6,10 @@ const newPlaceRepository = (model) => ({
   find: (query, options) => {
     return model.find(query, options).toArray();
   },
+
+  findOneAndUpdate: (id, options) => {
+    return model.findOneAndUpdate({ _id: id }, { ...options });
+  }
 });
 
 module.exports = newPlaceRepository;

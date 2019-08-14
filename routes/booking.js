@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const db = require('../config/connection');
 const sendGrid = require('../lib/sendGrid');
 const entityHelper = require('../lib/entityHelper');
+const pushProvider = require('./../lib/pushProvider');
 const { SUBSCRIPTION, SUBSCRIPTION_BOOKING_LIMITS } = require('./../config/constant');
 const { ACCESS, BOOKING_LIMIT_PERIODS } = require('./place/constant');
 
@@ -257,48 +258,69 @@ module.exports = function(app) {
     });
   });
 
-  // Deletes the booking document and all links to it
-  app.delete('/api/place/book/:id', function (req, res) {
-    var id = parseInt(req.params.id);
-    Booking.findOne({_id: id}, function (err, book) {
-      if (!book) {
-        res.json({message: "No such booking"});
-      } else if (book.closed) {
-        res.status(500);
-        res.json({message: "The booking is closed and could not be deleted"});
-      } else {
-        var timeDiff = moment(book.date + ' ' + book.startTime, 'DD-MM-YYYY HH.mm').diff(moment(), 'minutes');
+  getPlaceFreeSpots = async (place, date) => {
+    // join intervals and bookings
+    const books = await Booking.find({ place: place._id, closed: false }).toArray();
+    place.bookings = books;
+    const interval = await Interval.findOne({ place: place._id });
+    if (!interval) {
+      return 0;
+    }
+    place.intervals = interval.intervals;
 
-        if (timeDiff < 60) {
-          res.status(500);
-          res.json({message: "Could not be deleted. Less than one hours left"});
-        } else {
-          Place.findOneAndUpdate({_id: parseInt(book.place)}, {$pull: {bookings: id}}, function (err, updated) {
-            if (!updated.value) {
-              res.json({message: "Could not be deleted"});
-            } else {
-              User.findOneAndUpdate({_id: parseInt(book.user)}, {
-                $pull: {bookings: id},
-                $inc: {credits: book.payed}
-              }, function (err, updated) {
-                if (!updated.value) {
-                  res.json({message: "Could not be deleted"});
-                } else {
-                  Booking.deleteOne({_id: id}, function (err, deleted) {
-                    if (deleted.deletedCount === 1) {
-                      res.json({message: "Deleted"});
-                    } else {
-                      res.status(500);
-                      res.json({message: "Not deleted"});
-                    }
-                  });
-                }
-              });
-            }
-          });
+    const relevantBookings = place.bookings.filter(booking => booking.date === date);
+    const relevantDay = moment(date, 'DD-MM-YYYY').format('dddd');
+    const slotsTotal = place.intervals
+      .filter(interval => interval.day === relevantDay)
+      .reduce((acc, interval) => acc + interval.slots, 0);
+
+    return slotsTotal - relevantBookings.length;
+  }
+
+  // Deletes the booking document and all links to it
+  app.delete('/api/place/book/:id', async (req, res) => {
+    const id = parseInt(req.params.id);
+    const booking = await Booking.findOne({ _id: id });
+    if (!booking) {
+      return res.status(404).json({ message: 'No such booking' });
+    }
+    if (booking.closed) {
+      return res.status(500).json({ message: "The booking is closed and could not be deleted" });
+    }
+    const timeDiff = moment(booking.date + ' ' + booking.startTime, 'DD-MM-YYYY HH.mm').diff(moment(), 'minutes');
+
+    if (timeDiff < 60) {
+      return res.status(500).json({ message: "Could not be deleted. Less than one hours left" });
+    }
+
+    let place = await Place.findOneAndUpdate({ _id: parseInt(booking.place) }, { $pull: { bookings: id } });
+    place = place.value;
+    if (!place) {
+      return res.status(404).json({ message: 'Could not be deleted' });
+    }
+
+    const user = await User.findOneAndUpdate({ _id: parseInt(booking.user) }, {
+      $pull: { bookings: id },
+      $inc: { credits: booking.payed },
+    });
+
+    if (!user.value) {
+      return res.status(404).json({ message: 'Could not be deleted' });
+    }
+
+    const deleted = await Booking.deleteOne({ _id: id });
+    if (deleted.deletedCount === 1) {
+      if (place.notifyUsersBooking && await getPlaceFreeSpots(place, booking.date) === 1) {
+        // send notifications to subscribed users
+        const devicesToNotify = place.notifyUsersBooking[booking.date];
+        if (devicesToNotify) {
+          await pushProvider.freedBookingSpotNotification(devicesToNotify, place);
         }
       }
-    });
+      return res.status(200).json({ message: 'Deleted' });
+    } else {
+      return res.status(500).json({ message: 'Not deleted' });
+    }
   });
 
   // Add offer to the booking

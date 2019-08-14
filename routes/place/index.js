@@ -8,6 +8,7 @@ const imageUplader = require('../../lib/imageUplader');
 const entityHelper = require('../../lib/entityHelper');
 const newPostPlaceSchema = require('./schema/postPlace');
 const newEditPlaceSchema = require('./schema/editPlace');
+const newPostNotificationSchema = require('./schema/postNotification');
 const { ACCESS } = require('./constant');
 const { GENDERS } = require('./../user/constant');
 const { BOOKING_LIMIT_PERIODS } = require('./constant');
@@ -62,6 +63,49 @@ module.exports = (
     res.send('ok');
   });
   */
+
+  app.post('/api/place/notification', async (req, res) => {
+    const validation = validate(req.body, newPostNotificationSchema());
+    if (validation.error) {
+      return res.status(400).json({ message: validation.error });
+    }
+    const { placeId, userId, date } = req.body;
+
+    let formattedDate = moment(date);
+    if (!formattedDate.isValid()) {
+      return res.status(400).send({ message: `Keys in notifyUsersBooking must be a date! Got ${date}` });
+    }
+    formattedDate = formattedDate.format('DD-MM-YYYY');
+
+    const place = await placeRepository.findOne(placeId);
+    if (!place) {
+      return res.status(404).json({ message: 'Place not found' });
+    }
+
+    let notifyUsersBooking = place.notifyUsersBooking;
+    if (!notifyUsersBooking) {
+      notifyUsersBooking = {};
+    }
+    if (!notifyUsersBooking[formattedDate]) {
+      notifyUsersBooking[formattedDate] = [];
+    }
+    const user = await User.findOne({ _id: userId });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    if (!user.devices || !user.devices.length) {
+      return res.status(400).json({ message: 'User has no devices' });
+    }
+    for (const device of user.devices) {
+      if (notifyUsersBooking[formattedDate]
+        .every((presentDevice) => JSON.stringify(presentDevice) !== JSON.stringify(device))) {
+          notifyUsersBooking[formattedDate].push(device);
+        }
+    }
+    await placeRepository.findOneAndUpdate(placeId, { $set: { notifyUsersBooking } });
+
+    return res.status(200).json({ message: 'ok' });
+  });
 
   function timeFramesValid(validTimeFrames, timeFrames) {
     return Object.values(timeFrames)
@@ -288,7 +332,7 @@ module.exports = (
     }else{
       res.status(404).json({message: 'place not found' });
     }
-  })
+  });
   app.get('/api/place/:id/notificationRecivers', async (req, res) => {
     var id = parseInt(req.params.id);
     if(id){
@@ -355,7 +399,7 @@ module.exports = (
       address: place.address,
       type: place.type,
       name: place.name,
-      location: place.location.coordinates,
+      location: place.location,
       access: place.access,
     }));
     res.status(200).json(mappedPlaces);
