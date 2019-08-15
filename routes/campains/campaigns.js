@@ -17,7 +17,6 @@ db.getInstance(function (p_db) {
 });
 
 module.exports = function(app) {
-  
   //create new campaing
   app.post('/api/admin/campaign', async (req, res) => {
     let campaign =  req.body;
@@ -28,14 +27,22 @@ module.exports = function(app) {
       if(rewardValidator.isValid && taskValidator.isValid){
         campaign._id = await entityHelper.getNewId('campaignId');
         campaign.mainImage = null;
-        campaign.qrCode = crypto.randomBytes(20).toString('hex'),
+        campaign.qrCode = crypto.randomBytes(20).toString('hex');
         campaign.users = [];
         campaign.exampleImages = [];
         campaign.moodboardImages = [];
         campaign.winners = [];
         campaign.acceptedUsers = [];
         await Campaign.insertOne(campaign);
-      res.status(200).json(campaign);
+        const users = await User.find({}, { projection: { devices: 1 }}).toArray();
+        const allDevices = [];
+        for (const user of users) {
+          if (user.devices) {
+            allDevices.push(...user.devices);
+          }
+        }
+        await pushProvider.sendNewCampaignNotification(allDevices, campaign);
+        res.status(200).json(campaign);
       }else{
         res.status(400).json({message: rewardValidator.error + ' ' + taskValidator.error});
       }
@@ -88,7 +95,6 @@ module.exports = function(app) {
       res.status(400).json({message: "user not found"});
     }
   });
-  
 
   app.get('/api/campaign/:id', middleware.isAuthorized, async (req, res) => {
     let user = await req.user;

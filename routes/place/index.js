@@ -277,11 +277,10 @@ module.exports = (
   });
 
   // Find all the places near the specified coordinate
-  app.get('/api/place/near', function (req, res) {
-
-    var lat = parseFloat(req.query.lat);
-    var long = parseFloat(req.query.long);
-    var radius = req.query.radius;
+  app.get('/api/place/near', (req, res) => {
+    const lat = parseFloat(req.query.lat);
+    const long = parseFloat(req.query.long);
+    const radius = req.query.radius;
 
     Place.find({ location: { $nearSphere: { $geometry: { type: "Point", coordinates: [lat, long] },
           $maxDistance: radius * 1000 }}}, { projection: { client: 0 }}).toArray(async function (err, places) {
