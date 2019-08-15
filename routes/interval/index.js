@@ -1,6 +1,6 @@
-var db = require('../config/connection');
+var db = require('../../config/connection');
 var moment = require('moment');
-var entityHelper = require('../lib/entityHelper');
+var entityHelper = require('../../lib/entityHelper');
 var crypto = require('crypto');
 
 var User, Place, Offer, Counter, Booking, OfferPost, Interval, SamplePost;

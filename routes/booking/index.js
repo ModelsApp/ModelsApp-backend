@@ -2,14 +2,14 @@ const _ = require('lodash');
 const moment = require('moment');
 const crypto = require('crypto');
 
-const db = require('../config/connection');
-const sendGrid = require('../lib/sendGrid');
-const entityHelper = require('../lib/entityHelper');
-const pushProvider = require('./../lib/pushProvider');
-const { SUBSCRIPTION, SUBSCRIPTION_BOOKING_LIMITS } = require('./../config/constant');
-const { ACCESS, BOOKING_LIMIT_PERIODS } = require('./place/constant');
+const db = require('../../config/connection');
+const sendGrid = require('../../lib/sendGrid');
+const entityHelper = require('../../lib/entityHelper');
+const pushProvider = require('../../lib/pushProvider');
+const { SUBSCRIPTION, SUBSCRIPTION_BOOKING_LIMITS } = require('../../config/constant');
+const { ACCESS, BOOKING_LIMIT_PERIODS } = require('../place/constant');
 
-const calculateOfferPoints = require('./actionPoints/calculator/offer');
+const calculateOfferPoints = require('../actionPoints/calculator/offer');
 
 let User, Place, Offer, Counter, Booking, OfferPost, Interval, SamplePost;
 db.getInstance(function (p_db) {
@@ -23,7 +23,7 @@ db.getInstance(function (p_db) {
   SamplePost = p_db.collection('sampleposts');
 });
 
-module.exports = function(app) {
+module.exports = (app, placeUtil) => {
 
   /* migrate creationDate on Booking locally */
   /*
@@ -258,25 +258,6 @@ module.exports = function(app) {
     });
   });
 
-  getPlaceFreeSpots = async (place, date) => {
-    // join intervals and bookings
-    const books = await Booking.find({ place: place._id, closed: false }).toArray();
-    place.bookings = books;
-    const interval = await Interval.findOne({ place: place._id });
-    if (!interval) {
-      return 0;
-    }
-    place.intervals = interval.intervals;
-
-    const relevantBookings = place.bookings.filter(booking => booking.date === date);
-    const relevantDay = moment(date, 'DD-MM-YYYY').format('dddd');
-    const slotsTotal = place.intervals
-      .filter(interval => interval.day === relevantDay)
-      .reduce((acc, interval) => acc + interval.slots, 0);
-
-    return slotsTotal - relevantBookings.length;
-  }
-
   // Deletes the booking document and all links to it
   app.delete('/api/place/book/:id', async (req, res) => {
     const id = parseInt(req.params.id);
@@ -310,7 +291,7 @@ module.exports = function(app) {
 
     const deleted = await Booking.deleteOne({ _id: id });
     if (deleted.deletedCount === 1) {
-      if (place.notifyUsersBooking && await getPlaceFreeSpots(place, booking.date) === 1) {
+      if (place.notifyUsersBooking && await placeUtil.getPlaceFreeSpots(place, booking.date) === 1) {
         // send notifications to subscribed users
         const devicesToNotify = place.notifyUsersBooking[booking.date];
         if (devicesToNotify) {

@@ -32,8 +32,9 @@ module.exports = (
   placeExtraRepository,
   placeTimeFramesRepository,
   cityRepository,
+  placeUtil,
   validate,
-  ) => {
+) => {
   app.get('/api/place/:id/daysOffs', async (req, res) => {
     var id = parseInt(req.params.id);
       if(id){
@@ -389,29 +390,43 @@ module.exports = (
   }
   
   app.get('/api/v2/place', async (req, res) => {
-    const { typology, timeFrame, extra, city } = req.query;
+    const { typology, timeFrame, extra, city, date } = req.query;
+    if (date && !moment(date, 'DD-MM-YYYY').isValid()) {
+      return res.status(400).json({ message: 'Incorrect date, use DD-MM-YYYY format' });
+    }
     const query = await getPlaceQuery(typology, timeFrame, extra, city);
 
-    const places = await placeRepository.find(query, { projection: { client: 0 }});
-    const mappedPlaces = places.map(place => ({
-      _id: place._id,
-      mainImage: place.mainImage,
-      address: place.address,
-      type: place.type,
-      name: place.name,
-      location: place.location,
-      access: place.access,
-    }));
+    const places = await placeRepository.findAllWhereExcludeFields(query, ['client']);
+    const mappedPlaces = await Promise.all(places
+      .map(async (place) => {
+        let freeSpots;
+        if (date) {
+          freeSpots = await placeUtil.getPlaceFreeSpots(place, date);
+        }
+        const icons = await placeUtil.getPlaceIcons(place);
+        return {
+          _id: place._id,
+          mainImage: place.mainImage,
+          address: place.address,
+          type: place.type,
+          name: place.name,
+          location: place.location,
+          access: place.access,
+          freeSpots,
+          icons,
+        }
+      })
+      .sort((a, b) => a.freeSpots - b.freeSpots));
     res.status(200).json(mappedPlaces);
   });
 
   // Get all Places
   app.get('/api/place', middleware.isAuthorized, async (req, res) => {
-    const { typology, timeFrame, extra, city } = req.query;
-    const query = await getPlaceQuery(typology, timeFrame, extra, city);
+    const { typology, timeFrame, extra, city, date } = req.query;
+    const query = await getPlaceQuery(typology, timeFrame, extra, city, date);
 
     try {
-      const places = await placeRepository.find(query, { projection: { client: 0 }});
+      const places = await placeRepository.findAllWhereExcludeFields(query, ['client']);
       const placesJoined = await getMoreData(places);
   
       return res.status(200).json(placesJoined);

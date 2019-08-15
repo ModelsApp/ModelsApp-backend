@@ -8,6 +8,7 @@ const Sentry = require('@sentry/node');
 
 const db = require('./config/connection');
 const newValidator = require('./lib/validator');
+
 const newActionPointsRepository = require('./routes/actionPoints/repository');
 const newOfferRepository = require('./routes/offer/repository');
 const newUserRepository = require('./routes/user/repository');
@@ -16,7 +17,11 @@ const newPlaceTypeRepository = require('./routes/placeType/repository');
 const newPlaceExtraRepository = require('./routes/placeExtra/repository');
 const newPlaceTimeFrameRepository = require('./routes/placeTimeFrame/repository');
 const newCityRepository = require('./routes/city/repository');
+const newBookingRepository = require('./routes/booking/repository');
+const newIntervalRepository = require('./routes/interval/repository');
+
 const functions = require('./config/intervalFunctions');
+const newPlaceUtil = require('./routes/place/util');
 
 async function bootstrap() {
   Sentry.init({ dsn: config.sentryUrl });
@@ -62,14 +67,28 @@ async function bootstrap() {
     newOfferRepository(Offer),
     newValidator(),
   );
-  require('./routes/booking')(app);
-  require('./routes/intevals')(app);
+  require('./routes/booking')(
+    app,
+    newPlaceUtil(
+      newBookingRepository(Booking),
+      newIntervalRepository(Interval),
+      newPlaceTypeRepository(PlaceType),
+      newPlaceExtraRepository(PlaceExtra)
+    ),
+  );
+  require('./routes/interval')(app);
   require('./routes/place')(app,
     newPlaceRepository(Place),
     newPlaceTypeRepository(PlaceType),
     newPlaceExtraRepository(PlaceExtra),
     newPlaceTimeFrameRepository(PlaceTimeFrame),
     newCityRepository(City),
+    newPlaceUtil(
+      newBookingRepository(Booking),
+      newIntervalRepository(Interval),
+      newPlaceTypeRepository(PlaceType),
+      newPlaceExtraRepository(PlaceExtra)
+    ),
     newValidator(),
   );
   require('./routes/statistics')(app);
