@@ -1,7 +1,8 @@
 const schema = require('./schema');
+const middleware = require('./../../config/authMiddleware');
 
 module.exports = (app, actionPointsRepository, validate) => {
-  app.put('/api/action-points', async (req, res) => {
+  app.put('/api/action-points', middleware.isAdmin, async (req, res) => {
     const validation = validate(req.body, schema);
     if (validation.error) {
       return res.status(400).json({ message: validation.error });
@@ -19,7 +20,7 @@ module.exports = (app, actionPointsRepository, validate) => {
     return res.status(200).send(result.value);
   });
 
-  app.get('/api/action-points', async (req, res) => {
+  app.get('/api/action-points', middleware.isAuthorized, async (req, res) => {
     const { id, provider } = req.query;
     let result;
     try {

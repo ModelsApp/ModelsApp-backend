@@ -1,30 +1,26 @@
 const schema = require('./schema');
 const middleware = require('./../../config/authMiddleware');
 
-module.exports = (app, cityRepository, validate) => {
-  app.put('/api/city', middleware.isAdmin, async (req, res) => {
+module.exports = (app, driverRepository, validate) => {
+  app.put('/api/driver', middleware.isAdmin, async (req, res) => {
     const validation = validate(req.body, schema);
     if (validation.error) {
       return res.status(400).json({ message: validation.error });
     }
 
-    const { name, image } = req.body;
+    const { car, name, picture } = req.body;
     let result;
 
-    try {
-      result = await cityRepository.updateOrCreate({ name, image });
-    } catch (error) {
-      return res.status(500).json({ message: 'Something went wrong' });
-    }
+    result = await driverRepository.updateOrCreate(car, name, picture);
 
     return res.status(200).send(result.value);
   });
 
-  app.get('/api/city', middleware.isAuthorized, async (req, res) => {
-    const { id, name } = req.query;
+  app.get('/api/driver', middleware.isAuthorized, async (req, res) => {
+    const { id, name, car } = req.query;
     let result;
     try {
-      result = await cityRepository.find({ id, name });
+      result = await driverRepository.find({ id, name, car });
     } catch (error) {
       return res.status(500).json({ message: 'Something went wrong' });
     }

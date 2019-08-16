@@ -19,6 +19,7 @@ const newPlaceTimeFrameRepository = require('./routes/placeTimeFrame/repository'
 const newCityRepository = require('./routes/city/repository');
 const newBookingRepository = require('./routes/booking/repository');
 const newIntervalRepository = require('./routes/interval/repository');
+const newDriverRepository = require('./routes/driver/repository');
 
 const functions = require('./config/intervalFunctions');
 const newPlaceUtil = require('./routes/place/util');
@@ -27,7 +28,7 @@ async function bootstrap() {
   Sentry.init({ dsn: config.sentryUrl });
   await new Promise((resolve, reject) => db.initPool(() => resolve()));
  
-  let User, Place, Offer, Counter, Booking, PlaceTimeFrame, City,
+  let User, Place, Offer, Counter, Booking, PlaceTimeFrame, City, Driver,
     OfferPost, Interval, SamplePost, ActionPoints, PlaceType, PlaceExtra;
   await new Promise((resolve) => {
     db.getInstance((p_db) => {
@@ -44,6 +45,7 @@ async function bootstrap() {
       PlaceExtra = p_db.collection('placeExtras');
       PlaceTimeFrame = p_db.collection('placeTimeFrame');
       City = p_db.collection('cities');
+      Driver = p_db.collection('drivers');
       resolve();
     });
   });
@@ -118,6 +120,11 @@ async function bootstrap() {
     newCityRepository(City),
     newValidator(),
   );
+  require('./routes/driver')(
+    app,
+    newDriverRepository(Driver),
+    newValidator(),
+  )
 
   functions.checkBookingExpired(db);
   functions.sendReportBookingEmail(db);

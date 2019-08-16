@@ -1,7 +1,8 @@
 const newPostSchema = require('./schema');
+const middleware = require('./../../config/authMiddleware');
 
 module.exports = (app, placeTimeFrameRepository, placeTypeRepository, validate) => {
-  app.put('/api/place-time-frame', async (req, res) => {
+  app.put('/api/place-time-frame', middleware.isAdmin, async (req, res) => {
     const validTypes = (await placeTypeRepository.find({}, { projection: { type: 1 } }))
       .map(placeType => placeType.type);
     const validation = validate(req.body, newPostSchema(validTypes));
@@ -21,7 +22,7 @@ module.exports = (app, placeTimeFrameRepository, placeTypeRepository, validate) 
     return res.status(200).send(result.value);
   });
 
-  app.get('/api/place-time-frame', async (req, res) => {
+  app.get('/api/place-time-frame', middleware.isAuthorized, async (req, res) => {
     const { id, type, name } = req.query;
     let result;
     try {
