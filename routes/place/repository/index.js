@@ -20,6 +20,10 @@ const newPlaceRepository = (model) => ({
   findOneAndUpdate: (id, options) => {
     return model.findOneAndUpdate({ _id: id }, { ...options });
   },
+
+  findManyByIds: (ids) => {
+    return model.find({ _id: { $in: ids } }).toArray();
+  }
 });
 
 module.exports = newPlaceRepository;

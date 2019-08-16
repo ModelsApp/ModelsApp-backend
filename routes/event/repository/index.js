@@ -1,7 +1,11 @@
 const moment = require('moment');
 const { ObjectId } = require('mongodb');
+const Repository = require('./../../../core/repository');
 
 const getObjectId = (id) => {
+  if (!id) {
+    return null;
+  }
   let oid;
   try {
     oid = new ObjectId(id);
@@ -11,14 +15,18 @@ const getObjectId = (id) => {
   return oid;
 }
 
-const newEventRepository = (model) => ({
-  async insertOne({ requirements, placeId, timeframe }) {
+class EventRepository extends Repository {
+  constructor(model) {
+    super(model);
+  }
+
+  async insertOne ({ requirements, placeId, timeframe }) {
     if (timeframe) {
       timeframe.start = moment(timeframe.start).toISOString();
       timeframe.end = moment(timeframe.end).toISOString();
     }
 
-    const result = await model.insertOne({
+    const result = await this.model.insertOne({
       requirements,
       placeId,
       timeframe,
@@ -26,12 +34,12 @@ const newEventRepository = (model) => ({
     });
 
     return result.ops[0];
-  },
+  }
 
   updateOne(id, { requirements, timeframe }) {
     const oid = getObjectId(id);
     return new Promise((resolve, reject) => {
-      model.findOneAndUpdate(
+      this.model.findOneAndUpdate(
         {
           _id: oid,
         },
@@ -51,12 +59,12 @@ const newEventRepository = (model) => ({
         },
       );
     });
-  },
+  }
 
-  findWhere: ({ id }) => {
+  findWhere({ id }) {
     const oid = getObjectId(id);
     return new Promise((resolve, reject) => {
-      model.find(
+      this.model.find(
         {
         ...(oid && { _id: oid }),
         },
@@ -65,15 +73,29 @@ const newEventRepository = (model) => ({
           resolve(events);
         });
       });
-  },
+  }
 
-  findById: (id) => {
+  findById(id) {
     const oid = getObjectId(id);
     if (!oid) {
       return null;
     }
-    return model.findOne({ _id: oid });
-  },
-});
+    return this.model.findOne({ _id: oid });
+  }
+
+  addPlace(id, placeId) {
+    return this._addToArray(id, 'places', placeId);
+  }
+
+  setPlaces(id, placeIds) {
+    return this._setField(id, 'places', placeIds);
+  }
+
+  removePlace(id, placeId) {
+    return this._removeFromArray(id, 'places', placeId);
+  }
+}
+
+const newEventRepository = (model) => new EventRepository(model);
 
 module.exports = newEventRepository;

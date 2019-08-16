@@ -1,3 +1,18 @@
+const { ObjectId } = require('mongodb');
+
+const getObjectId = (id) => {
+  if (!id) {
+    return null;
+  }
+  let oid;
+  try {
+    oid = new ObjectId(id);
+  } catch (e) {
+    return null;
+  }
+  return oid;
+}
+
 const newActionPointsRepository = (model) => ({
     /***
    * 
@@ -11,10 +26,11 @@ const newActionPointsRepository = (model) => ({
   },
   
   find: (id, provider) => {
+    const oid = getObjectId(id);
     return new Promise((resolve, reject) => {
       model.find(
         {
-        ...(id && { _id: id }),
+        ...(oid && { _id: oid }),
         ...(provider && { provider }),
         }).toArray((err, actionPoints) => {
           if (err) reject(err);

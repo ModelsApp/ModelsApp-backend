@@ -1,3 +1,18 @@
+const { ObjectId } = require('mongodb');
+
+const getObjectId = (id) => {
+  if (!id) {
+    return null;
+  }
+  let oid;
+  try {
+    oid = new ObjectId(id);
+  } catch (e) {
+    return null;
+  }
+  return oid;
+}
+
 const newCityRepository = (model) => ({
   updateOrCreate({ name, image }) {
     return new Promise((resolve, reject) => {
@@ -26,10 +41,11 @@ const newCityRepository = (model) => ({
   },
 
   find: ({ id, name }, options) => {
+    const oid = getObjectId(id);
     return new Promise((resolve, reject) => {
       model.find(
         {
-        ...(id && { _id: id }),
+        ...(oid && { _id: oid }),
         ...(name && { name }),
         },
         options

@@ -7,7 +7,7 @@ const schema = Joi.object().keys({
     dressCode: Joi.string().strict().valid(['Elegant', 'Casual']),
   }).required(),
   placeId: Joi.number().strict().required(),
-  timeframe
+  timeframe,
 });
 
 module.exports = schema;

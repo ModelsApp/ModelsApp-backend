@@ -2,6 +2,9 @@ const moment = require('moment');
 const { ObjectId } = require('mongodb');
 
 const getObjectId = (id) => {
+  if (!id) {
+    return null;
+  }
   let oid;
   try {
     oid = new ObjectId(id);
