@@ -93,19 +93,6 @@ module.exports = function(app) {
     }
   });
 
-  // Constant payments or penalties for models which
-  // level differs from the offer's level
-  const levelDiffBooking = [
-    [0, -50, -100, -150, -200],
-    [0, 0, -50, -100, -150],
-    [0, 0, 0, -50, -100],
-    [30, 30, 30, 0, -50],
-    [40, 40, 40, 40, 0]
-  ];
-  const levelDiffReviews = [
-    30, 40, 60, 70, 100
-  ];
-
   // Accept the model's post to deal with her offer
   app.put('/api/admin/acceptOfferPost/:id', middleware.isAdmin, function (req, res) {
     var id = parseInt(req.params.id);
@@ -119,10 +106,6 @@ module.exports = function(app) {
           if(!offer){
             res.json({ message: "No such Offer" });
           } else {
-            // Everything is just for calculating how should user's credits change in order
-            // to offer-user-level system.
-            // levelDiffReviews[user.level] + levelDiffBooking - book.payed =+ user.credits
-
             Booking.findOne({ offer: offer._id }, function (err, book) {
               if(!book) {
                 res.json({ message: "Booking for the offer not found" });
@@ -131,9 +114,7 @@ module.exports = function(app) {
                   if(!user.level) {
                     res.json({ message: "User has no level" });
                   } else {
-                    var payment = levelDiffReviews[user.level - 1] + levelDiffBooking[user.level - 1][offer.level - 1] - book.payed;
-
-                    User.findOneAndUpdate({ _id: offerPost.user }, { $inc: { credits: payment }});
+                    User.findOneAndUpdate({ _id: offerPost.user }, { $inc: { credits: -book.payed }});
                     Offer.findOneAndUpdate({ _id: offerPost.offer }, { $set: { closed: true }});
                     OfferPost.findOneAndUpdate({ _id: id }, { $set: { accepted: true }});
 
