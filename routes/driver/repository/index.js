@@ -1,3 +1,5 @@
+const moment = require('moment');
+
 const newDriverRepository = (model) => ({
   updateOrCreate(car, name, picture) {
     return new Promise((resolve, reject) => {
@@ -6,7 +8,12 @@ const newDriverRepository = (model) => ({
           name,
         },
         {
-          $set: { car, name, picture }
+          $set: {
+            car,
+            name,
+            picture,
+            createdAt: moment().utc().toISOString(),
+          }
         },
         {
           returnOriginal: false,
@@ -40,7 +47,7 @@ const newDriverRepository = (model) => ({
 
   findById: (id) => {
     return model.findOne({ _id: id });
-  }
+  },
 });
 
 module.exports = newDriverRepository;

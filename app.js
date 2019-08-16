@@ -20,6 +20,7 @@ const newCityRepository = require('./routes/city/repository');
 const newBookingRepository = require('./routes/booking/repository');
 const newIntervalRepository = require('./routes/interval/repository');
 const newDriverRepository = require('./routes/driver/repository');
+const newEventRepository = require('./routes/event/repository');
 
 const functions = require('./config/intervalFunctions');
 const newPlaceUtil = require('./routes/place/util');
@@ -29,7 +30,8 @@ async function bootstrap() {
   await new Promise((resolve, reject) => db.initPool(() => resolve()));
  
   let User, Place, Offer, Counter, Booking, PlaceTimeFrame, City, Driver,
-    OfferPost, Interval, SamplePost, ActionPoints, PlaceType, PlaceExtra;
+    OfferPost, Interval, SamplePost, ActionPoints, PlaceType, PlaceExtra,
+    Event;
   await new Promise((resolve) => {
     db.getInstance((p_db) => {
       User = p_db.collection('users');
@@ -46,6 +48,7 @@ async function bootstrap() {
       PlaceTimeFrame = p_db.collection('placeTimeFrame');
       City = p_db.collection('cities');
       Driver = p_db.collection('drivers');
+      Event = p_db.collection('events');
       resolve();
     });
   });
@@ -124,7 +127,13 @@ async function bootstrap() {
     app,
     newDriverRepository(Driver),
     newValidator(),
-  )
+  );
+  require('./routes/event')(
+    app,
+    newEventRepository(Event),
+    newPlaceRepository(Place),
+    newValidator(),
+  );
 
   functions.checkBookingExpired(db);
   functions.sendReportBookingEmail(db);

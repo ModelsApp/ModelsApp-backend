@@ -17,13 +17,9 @@ module.exports = (app, driverRepository, validate) => {
   });
 
   app.get('/api/driver', middleware.isAuthorized, async (req, res) => {
-    const { id, name, car } = req.query;
-    let result;
-    try {
-      result = await driverRepository.find({ id, name, car });
-    } catch (error) {
-      return res.status(500).json({ message: 'Something went wrong' });
-    }
+    const { id, name } = req.query;
+    
+    const result = await driverRepository.find({ id, name });
 
     return res.status(200).send(result);
   });
