@@ -1,3 +1,15 @@
+const { ObjectId } = require('mongodb');
+
+const getObjectId = (id) => {
+  let oid;
+  try {
+    oid = new ObjectId(id);
+  } catch (e) {
+    return null;
+  }
+  return oid;
+}
+
 const newPlaceExtraRepository = (model) => ({
   updateOrCreate({ type, name }) {
     return new Promise((resolve, reject) => {
@@ -24,10 +36,11 @@ const newPlaceExtraRepository = (model) => ({
   },
 
   find: ({ id, type, name }, options) => {
+    const oid = getObjectId(id);
     return new Promise((resolve, reject) => {
       model.find(
         {
-        ...(id && { _id: id }),
+        ...(oid && { _id: oid }),
         ...(type && { type }),
         ...(name && { name }),
         },

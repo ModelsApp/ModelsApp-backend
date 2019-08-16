@@ -1,4 +1,15 @@
 const moment = require('moment');
+const { ObjectId } = require('mongodb');
+
+const getObjectId = (id) => {
+  let oid;
+  try {
+    oid = new ObjectId(id);
+  } catch (e) {
+    return null;
+  }
+  return oid;
+}
 
 const newEventRepository = (model) => ({
   async insertOne({ requirements, placeId, timeframe }) {
@@ -18,10 +29,11 @@ const newEventRepository = (model) => ({
   },
 
   updateOne(id, { requirements, timeframe }) {
+    const oid = getObjectId(id);
     return new Promise((resolve, reject) => {
       model.findOneAndUpdate(
         {
-          _id: id,
+          _id: oid,
         },
         {
           $set: {
@@ -42,10 +54,11 @@ const newEventRepository = (model) => ({
   },
 
   findWhere: ({ id }) => {
+    const oid = getObjectId(id);
     return new Promise((resolve, reject) => {
       model.find(
         {
-        ...(id && { _id: id }),
+        ...(oid && { _id: oid }),
         },
       ).toArray((err, events) => {
           if (err) reject(err);
@@ -55,8 +68,12 @@ const newEventRepository = (model) => ({
   },
 
   findById: (id) => {
-    return model.findOne({ _id: id });
-  }
+    const oid = getObjectId(id);
+    if (!oid) {
+      return null;
+    }
+    return model.findOne({ _id: oid });
+  },
 });
 
 module.exports = newEventRepository;

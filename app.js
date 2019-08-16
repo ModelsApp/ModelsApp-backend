@@ -21,6 +21,7 @@ const newBookingRepository = require('./routes/booking/repository');
 const newIntervalRepository = require('./routes/interval/repository');
 const newDriverRepository = require('./routes/driver/repository');
 const newEventRepository = require('./routes/event/repository');
+const newDriverRideRepository = require('./routes/driverRide/repository');
 
 const functions = require('./config/intervalFunctions');
 const newPlaceUtil = require('./routes/place/util');
@@ -31,7 +32,7 @@ async function bootstrap() {
  
   let User, Place, Offer, Counter, Booking, PlaceTimeFrame, City, Driver,
     OfferPost, Interval, SamplePost, ActionPoints, PlaceType, PlaceExtra,
-    Event;
+    Event, DriverRide;
   await new Promise((resolve) => {
     db.getInstance((p_db) => {
       User = p_db.collection('users');
@@ -49,6 +50,7 @@ async function bootstrap() {
       City = p_db.collection('cities');
       Driver = p_db.collection('drivers');
       Event = p_db.collection('events');
+      DriverRide = p_db.collection('driverRides');
       resolve();
     });
   });
@@ -132,6 +134,12 @@ async function bootstrap() {
     app,
     newEventRepository(Event),
     newPlaceRepository(Place),
+    newValidator(),
+  );
+  require('./routes/driverRide')(
+    app,
+    newDriverRideRepository(DriverRide),
+    newDriverRepository(Driver),
     newValidator(),
   );
 

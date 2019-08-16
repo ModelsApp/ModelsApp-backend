@@ -12,6 +12,23 @@ const getObjectId = (id) => {
 }
 
 const newDriverRepository = (model) => ({
+  async insertOne({ driverId, from, to, timeframe }) {
+    if (timeframe) {
+      timeframe.start = moment(timeframe.start).toISOString();
+      timeframe.end = moment(timeframe.end).toISOString();
+    }
+
+    const result = await model.insertOne({
+      driverId,
+      from,
+      to,
+      timeframe,
+      createdAt: moment().utc().toISOString(),
+    });
+
+    return result.ops[0];
+  },
+
   updateOrCreate(car, name, picture) {
     return new Promise((resolve, reject) => {
       model.findOneAndUpdate(
@@ -40,19 +57,17 @@ const newDriverRepository = (model) => ({
     });
   },
 
-  find: ({ id, name, car }, options) => {
+  findWhere: ({ id, driverId }) => {
     const oid = getObjectId(id);
     return new Promise((resolve, reject) => {
       model.find(
         {
         ...(oid && { _id: oid }),
-        ...(car && { car }),
-        ...(name && { name }),
+        ...(driverId && { driverId }),
         },
-        options,
-      ).toArray((err, drivers) => {
+      ).toArray((err, results) => {
           if (err) reject(err);
-          resolve(drivers);
+          resolve(results);
         });
       });
   },

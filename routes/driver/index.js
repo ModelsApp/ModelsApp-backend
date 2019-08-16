@@ -9,9 +9,8 @@ module.exports = (app, driverRepository, validate) => {
     }
 
     const { car, name, picture } = req.body;
-    let result;
 
-    result = await driverRepository.updateOrCreate(car, name, picture);
+    const result = await driverRepository.updateOrCreate(car, name, picture);
 
     return res.status(200).send(result.value);
   });
