@@ -415,7 +415,7 @@ module.exports = (
           icons,
         }
       })
-      .sort((a, b) => a.freeSpots - b.freeSpots));
+      .sort((a, b) => b.freeSpots - a.freeSpots));
     res.status(200).json(mappedPlaces);
   });
 
