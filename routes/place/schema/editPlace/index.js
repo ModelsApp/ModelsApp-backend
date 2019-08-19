@@ -17,7 +17,7 @@ const newSchema = (validTypes, validExtras, validCities) => Joi.object().keys({
   address: Joi.string().strict(),
   photo: Joi.string().strict(),
   photos: Joi.array().items(Joi.string()),
-  location: Joi.object().keys({coordinates: Joi.array().min(2).items(Joi.number())}),
+  location: Joi.object().keys({ coordinates: Joi.array().min(2).items(Joi.number()) }),
   socials: Joi.object().keys({
     facebook: Joi.string().strict(),
     tripAdvisor: Joi.string().strict(),

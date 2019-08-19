@@ -41,7 +41,10 @@ const newCityRepository = (model) => ({
   },
 
   find: ({ id, name }, options) => {
-    const oid = getObjectId(id);
+    let oid;
+    if (id) {
+      oid = getObjectId(id);
+    }
     return new Promise((resolve, reject) => {
       model.find(
         {

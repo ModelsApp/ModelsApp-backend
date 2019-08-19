@@ -357,7 +357,7 @@ module.exports = (
     });
   });
 
-  async function getPlaceQuery(typology, timeFrame, extra, city) {
+  async function getPlaceQuery(typology, extra, city) {
     const query = { isActive: true };
     if (typology) {
       const placeType = await placeTypeRepository.findOne(typology);
@@ -372,15 +372,6 @@ module.exports = (
       }
     }
 
-    if (
-      timeFrame
-      && _.isPlainObject(timeFrame)
-      && timeFrame.tf
-      && timeFrame.day
-    ) {
-      query[`timeFrames.${timeFrame.day.toLowerCase()}`] = timeFrame.tf;
-    }
-
     if (city) {
       query.city = city;
     }
@@ -389,11 +380,11 @@ module.exports = (
   }
   
   app.get('/api/v2/place', async (req, res) => {
-    const { typology, timeFrame, extra, city, date } = req.query;
+    const { typology, extra, city, date } = req.query;
     if (date && !moment(date, 'DD-MM-YYYY').isValid()) {
       return res.status(400).json({ message: 'Incorrect date, use DD-MM-YYYY format' });
     }
-    const query = await getPlaceQuery(typology, timeFrame, extra, city);
+    const query = await getPlaceQuery(typology, extra, city);
 
     const places = await placeRepository.findAllWhereExcludeFields(query, ['client']);
     const mappedPlaces = await Promise.all(places
@@ -421,8 +412,8 @@ module.exports = (
 
   // Get all Places
   app.get('/api/place', middleware.isAuthorized, async (req, res) => {
-    const { typology, timeFrame, extra, city, date } = req.query;
-    const query = await getPlaceQuery(typology, timeFrame, extra, city, date);
+    const { typology, extra, city, date } = req.query;
+    const query = await getPlaceQuery(typology, extra, city, date);
 
     try {
       const places = await placeRepository.findAllWhereExcludeFields(query, ['client']);
