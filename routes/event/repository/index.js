@@ -20,7 +20,7 @@ class EventRepository extends Repository {
     super(model);
   }
 
-  async insertOne ({ requirements, placeId, timeframe }) {
+  async insertOne ({ requirements, placesOffers, timeframe }) {
     if (timeframe) {
       timeframe.start = moment(timeframe.start).toISOString();
       timeframe.end = moment(timeframe.end).toISOString();
@@ -28,7 +28,7 @@ class EventRepository extends Repository {
 
     const result = await this.model.insertOne({
       requirements,
-      placeId,
+      placesOffers,
       timeframe,
       participants: [],
       createdAt: moment().utc().toISOString(),
@@ -84,16 +84,16 @@ class EventRepository extends Repository {
     return this.model.findOne({ _id: oid });
   }
 
-  addPlace(id, placeId) {
-    return this._addToArray(id, 'places', placeId);
+  addPlaceOffers(id, placeOffers) {
+    return this._addToArray(id, 'placesOffers', placeOffers);
   }
 
-  setPlaces(id, placeIds) {
-    return this._setField(id, 'places', placeIds);
+  setPlacesOffers(id, placesOffers) {
+    return this._setField(id, 'placesOffers', placesOffers);
   }
 
-  removePlace(id, placeId) {
-    return this._removeFromArray(id, 'places', placeId);
+  removePlaceOffers(id, placeId) {
+    return this._removeFromArray(id, 'placesOffers', { placeId });
   }
 
   bookEvent(id, userId) {

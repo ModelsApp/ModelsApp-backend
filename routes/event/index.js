@@ -1,11 +1,12 @@
 const _ = require('lodash');
 
-const postSchema = require('./schema/postEvent');
-const addPlaceSchema = require('./schema/addPlace');
-const updatePlacesSchema = require('./schema/updatePlaces');
-const removePlaceSchema = require('./schema/removePlace');
-const bookEventSchema = require('./schema/bookEvent');
 const middleware = require('../../config/authMiddleware');
+const postSchema = require('./schema/postEvent');
+const addPlaceSchema = require('./schema/place/addPlace');
+const updatePlacesSchema = require('./schema/place/updatePlaces');
+const removePlaceSchema = require('./schema/place/removePlace');
+const bookEventSchema = require('./schema/bookEvent');
+const validatePlacesOffers = require('./api/place/validatePlacesOffers');
 
 module.exports = (app, eventRepository, placeRepository, validate) => {
   app.post('/api/event', middleware.isAdmin, async (req, res) => {
@@ -14,15 +15,17 @@ module.exports = (app, eventRepository, placeRepository, validate) => {
       return res.status(400).json({ message: validation.error });
     }
 
-    const { requirements, placeId, timeframe } = req.body;
+    const { requirements, placesOffers, timeframe } = req.body;
 
-    if (!await placeRepository.findOne(placeId)) {
-      return res.status(404).json({ message: 'No place with given id' });
+    try {
+      await validatePlacesOffers(placesOffers, placeRepository);
+    } catch (err) {
+      return res.status(400).json({ message: err.message });
     }
 
     const event = await eventRepository.insertOne({
       requirements,
-      placeId,
+      placesOffers,
       timeframe,
     });
 
@@ -42,16 +45,16 @@ module.exports = (app, eventRepository, placeRepository, validate) => {
       return res.status(400).json({ message: validation.error });
     }
 
-    const { id, placeId } = req.body;
+    const { id, placeOffers } = req.body;
 
     if (!await eventRepository.findById(id)) {
       return res.status(404).json({ message: 'No event with given id' });
     }
-    if (!await placeRepository.findOne(placeId)) {
+    if (!await placeRepository.findOne(placeOffers.placeId)) {
       return res.status(404).json({ message: 'No place with given id' });
     }
 
-    const event = await eventRepository.addPlace(id, placeId);
+    const event = await eventRepository.addPlaceOffers(id, placeOffers);
 
     return res.status(200).json(event);
   });
@@ -62,17 +65,18 @@ module.exports = (app, eventRepository, placeRepository, validate) => {
       return res.status(400).json({ message: validation.error });
     }
 
-    const { id, placeIds } = req.body;
+    const { id, placesOffers } = req.body;
 
     if (!await eventRepository.findById(id)) {
       return res.status(404).json({ message: 'No event with given id' });
     }
-    const foundPlaces = await placeRepository.findManyByIds(placeIds);
-    if (foundPlaces.length !== placeIds.length) {
-      return res.status(404).json({ message: 'Invalid place ids' });
+    try {
+      await validatePlacesOffers(placesOffers, placeRepository);
+    } catch (err) {
+      return res.status(400).json({ message: err.message });
     }
 
-    const event = await eventRepository.setPlaces(id, placeIds);
+    const event = await eventRepository.setPlacesOffers(id, placesOffers);
 
     return res.status(200).json(event);
   });
@@ -88,7 +92,7 @@ module.exports = (app, eventRepository, placeRepository, validate) => {
     if (!await eventRepository.findById(id)) {
       return res.status(404).json({ message: 'No event with given id' });
     }
-    const event = await eventRepository.removePlace(id, placeId);
+    const event = await eventRepository.removePlaceOffers(id, placeId);
 
     return res.status(200).json(event);
   });

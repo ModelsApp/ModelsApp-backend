@@ -1,5 +1,7 @@
 const Joi = require('@hapi/joi');
 
+const { OFFER_SCOPES } = require('./../../constant');
+
 const schema = Joi.object().keys({
   name: Joi.string().strict().required(),
   userID: Joi.number().required(),
@@ -9,6 +11,7 @@ const schema = Joi.object().keys({
   photo: Joi.string().strict().required(),
   level: Joi.number(),
   credits: Joi.object().required(),
+  scopes: Joi.array().valid(Object.values(OFFER_SCOPES)),
 });
 
 module.exports = schema;

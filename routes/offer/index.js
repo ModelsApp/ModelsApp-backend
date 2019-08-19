@@ -10,6 +10,7 @@ var dfs = require('obj-traverse/lib/obj-traverse');
 var entityHelper = require('../../lib/entityHelper');
 const calculateActionPoints = require('../actionPoints/calculator/action');
 const postOfferSchema = require('./schema/postOffer');
+const { OFFER_SCOPES } = require('./constant');
 
 let User, Place, Offer, Counter, Booking, OfferPost, Interval, SamplePost;
 db.getInstance(function (p_db) {
@@ -29,6 +30,14 @@ module.exports = function(app, actionPointsRepository, userRepository, offerRepo
   //   OfferPost.deleteMany({_id: {$in: [12,13,38,39,40,41,42,43,44,45,46,47,48,49,50,51]}});
   //   res.send('mutated');
   // });
+
+  /* Migrate offers, add scopes field to all */
+  /*
+  app.get('/api/migrate', async (req, res) => {
+    await Offer.updateMany({}, { $set: { scopes: ['regular'] } });
+    res.send(await Offer.find({}).toArray());
+  });
+  */
 
   // Offers section
   // ______________________________
@@ -61,7 +70,12 @@ module.exports = function(app, actionPointsRepository, userRepository, offerRepo
   //Get all the booking belonging to specified place
   app.get('/api/place/:id/offer', function (req, res) {
     var id = parseInt(req.params.id);
-    Offer.find({ place: id }).toArray(function (err, offers) {
+    const query = { place: id };
+    const { scopes } = req.query;
+    if (scopes) {
+      query.scopes = scopes;
+    }
+    Offer.find(query).toArray(function (err, offers) {
       res.json(offers);
     });
   });
@@ -210,6 +224,7 @@ module.exports = function(app, actionPointsRepository, userRepository, offerRepo
       photo,
       level,
       credits,
+      scopes,
     } = req.body;
     const offer = {
       name,
@@ -221,6 +236,7 @@ module.exports = function(app, actionPointsRepository, userRepository, offerRepo
       photo,
       post: null,
       closed: false,
+      scopes: scopes || [OFFER_SCOPES.regular],
       level: parseInt(level || 1),
       images: [],
       mainImage: null,
