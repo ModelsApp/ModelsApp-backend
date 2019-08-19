@@ -30,6 +30,7 @@ class EventRepository extends Repository {
       requirements,
       placeId,
       timeframe,
+      participants: [],
       createdAt: moment().utc().toISOString(),
     });
 
@@ -93,6 +94,14 @@ class EventRepository extends Repository {
 
   removePlace(id, placeId) {
     return this._removeFromArray(id, 'places', placeId);
+  }
+
+  bookEvent(id, userId) {
+    return this._addToArray(id, 'participants', userId);
+  }
+
+  unbookEvent(id, userId) {
+    return this._removeFromArray(id, 'participants', userId);
   }
 }
 

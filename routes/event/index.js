@@ -1,7 +1,10 @@
+const _ = require('lodash');
+
 const postSchema = require('./schema/postEvent');
 const addPlaceSchema = require('./schema/addPlace');
 const updatePlacesSchema = require('./schema/updatePlaces');
 const removePlaceSchema = require('./schema/removePlace');
+const bookEventSchema = require('./schema/bookEvent');
 const middleware = require('../../config/authMiddleware');
 
 module.exports = (app, eventRepository, placeRepository, validate) => {
@@ -88,6 +91,59 @@ module.exports = (app, eventRepository, placeRepository, validate) => {
     const event = await eventRepository.removePlace(id, placeId);
 
     return res.status(200).json(event);
+  });
+
+  app.post('/api/event/book', middleware.isAuthorized, async (req, res) => {
+    const user = await req.user;
+    if (!user) {
+      return res.status(404).json({ message: 'Unauthorized' });
+    }
+
+    const validation = validate(req.body, bookEventSchema);
+    if (validation.error) {
+      return res.status(400).json({ message: validation.error });
+    }
+    
+    const { eventId } = req.body;
+
+    const event = await eventRepository.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ message: 'No event with given id' });
+    }
+    if (event.participants.length >= event.timeframe.spots) {
+      return res.status(403).json({ message: 'No free spots available for this event' });
+    }
+    if (_.includes(event.participants, user._id)) {
+      return res.status(400).json({ message: 'User already participates in this event' });
+    }
+    await eventRepository.bookEvent(eventId, user._id);
+
+    return res.status(200).json({ message: 'Event booked' });
+  });
+
+  app.delete('/api/event/book', middleware.isAuthorized, async (req, res) => {
+    const user = await req.user;
+    if (!user) {
+      return res.status(404).json({ message: 'Unauthorized' });
+    }
+
+    const validation = validate(req.body, bookEventSchema);
+    if (validation.error) {
+      return res.status(400).json({ message: validation.error });
+    }
+    
+    const { eventId } = req.body;
+
+    const event = await eventRepository.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ message: 'No event with given id' });
+    }
+    if (!_.includes(event.participants, user._id)) {
+      return res.status(400).json({ message: 'User does not participate in this event' });
+    }
+    await eventRepository.unbookEvent(eventId, user._id);
+
+    return res.status(200).json({ message: 'Event unbooked' });
   });
 };
 
