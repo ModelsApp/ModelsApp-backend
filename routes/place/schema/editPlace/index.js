@@ -9,7 +9,6 @@ const dayTimeFrame = Joi.array().items(Joi.string());
 
 const newSchema = (validTypes, validExtras, validCities) => Joi.object().keys({
   isActive: Joi.boolean().strict(),
-  tags: Joi.array().items(Joi.string().strict()),
   phone: Joi.string().strict(),
   instapage: Joi.string().strict(),
   name: Joi.string().strict(),

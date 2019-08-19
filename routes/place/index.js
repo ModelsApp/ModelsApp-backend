@@ -197,7 +197,7 @@ module.exports = (
   // Edit Place
   app.put('/api/place/:id', async (req, res) => {
     const id = parseInt(req.params.id);
-    const newPlace = req.body.place;
+    const newPlace = req.body;
     const validTypes = (await placeTypeRepository.find({}, { projection: { type: 1 } }))
       .map(placeType => placeType.type);
     const validExtras = (await placeExtraRepository.find({}, { projection: { name: 1 } }))
@@ -219,7 +219,6 @@ module.exports = (
         }else{
 
           if(newPlace.isActive !== place.isActive && newPlace.isActive) place.isActive = newPlace.isActive;
-          if(newPlace.tags !== place.tags && newPlace.tags) place.tags = newPlace.tags;
           if(newPlace.phone !== place.phone && newPlace.phone) place.phone = newPlace.phone;
           if(newPlace.instapage !== place.instapage && newPlace.instapage) place.instapage = newPlace.instapage;
           if(newPlace.name !== place.name && newPlace.name) place.name = newPlace.name;
