@@ -1,4 +1,5 @@
 const _ = require('lodash');
+const moment = require('moment');
 
 const middleware = require('../../config/authMiddleware');
 const postSchema = require('./schema/postEvent');
@@ -164,6 +165,15 @@ module.exports = (app, eventRepository, placeRepository, validate) => {
     }
     if (!_.includes(event.participants, user._id)) {
       return res.status(400).json({ message: 'User does not participate in this event' });
+    }
+    const duration = moment.duration(moment().diff(event.timeframe.start));
+    const hours = duration.asHours();
+
+    if (hours > -2) {
+      if (hours >= 0) {
+        return res.status(403).json({ message: `Couldn't unbook event as it has already started` });  
+      }
+      return res.status(403).json({ message: `Couldn't unbook event as it starts in less than 2 hours` });
     }
     await eventRepository.unbookEvent(eventId, user._id);
 

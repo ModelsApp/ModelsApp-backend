@@ -2,6 +2,7 @@ const _ = require('lodash');
 
 const postSchema = require('./schema/post');
 const selectOneSchema = require('./schema/selectOne');
+const bookRideSchema = require('./schema/bookRide');
 const middleware = require('../../config/authMiddleware');
 
 module.exports = (app, driverRideRepository, driverRepository, validate) => {
@@ -51,12 +52,12 @@ module.exports = (app, driverRideRepository, driverRepository, validate) => {
       return res.status(404).json({ message: 'Unauthorized' });
     }
 
-    const validation = validate(req.body, selectOneSchema);
+    const validation = validate(req.body, bookRideSchema);
     if (validation.error) {
       return res.status(400).json({ message: validation.error });
     }
 
-    const { id } = req.body;
+    const { id, eventId } = req.body;
 
     const driverRide = await driverRideRepository.findById(id);
     if (!driverRide) {
@@ -65,10 +66,10 @@ module.exports = (app, driverRideRepository, driverRepository, validate) => {
     if (driverRide.passengers.length >= driverRide.timeframe.spots) {
       return res.status(403).json({ message: 'No free spots available for this ride' });
     }
-    if (_.includes(driverRide.passengers, user._id)) {
+    if (driverRide.passengers.find(passenger => passenger.userId === user._id)) {
       return res.status(400).json({ message: 'User already participates in this ride' });
     }
-    await driverRideRepository.addPassenger(id, user._id);
+    await driverRideRepository.addPassenger(id, { userId: user._id, eventId });
 
     return res.status(200).json({ message: 'Ride booked' });
   });
@@ -79,21 +80,21 @@ module.exports = (app, driverRideRepository, driverRepository, validate) => {
       return res.status(404).json({ message: 'Unauthorized' });
     }
 
-    const validation = validate(req.body, selectOneSchema);
+    const validation = validate(req.body, bookRideSchema);
     if (validation.error) {
       return res.status(400).json({ message: validation.error });
     }
 
-    const { id } = req.body;
+    const { id, eventId } = req.body;
 
     const driverRide = await driverRideRepository.findById(id);
     if (!driverRide) {
       return res.status(404).json({ message: 'No driverRide with given id' });
     }
-    if (!_.includes(driverRide.passengers, user._id)) {
-      return res.status(400).json({ message: 'User does not participate in that ride' });
+    if (!driverRide.passengers.find(passenger => passenger.userId === user._id)) {
+      return res.status(400).json({ message: 'User does not participate in this ride' });
     }
-    await driverRideRepository.removePassenger(id, user._id);
+    await driverRideRepository.removePassenger(id, { userId: user._id, eventId });
 
     return res.status(200).json({ message: 'Ride unbooked' });
   });
