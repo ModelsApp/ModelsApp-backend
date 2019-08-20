@@ -2,6 +2,7 @@ const _ = require('lodash');
 
 const middleware = require('../../config/authMiddleware');
 const postSchema = require('./schema/postEvent');
+const editSchema = require('./schema/editEvent');
 const addPlaceSchema = require('./schema/place/addPlace');
 const updatePlacesSchema = require('./schema/place/updatePlaces');
 const removePlaceSchema = require('./schema/place/removePlace');
@@ -30,6 +31,25 @@ module.exports = (app, eventRepository, placeRepository, validate) => {
     });
 
     return res.status(201).json(event);
+  });
+
+  app.put('/api/event', middleware.isAdmin, async (req, res) => {
+    const validation = validate(req.body, editSchema);
+    if (validation.error) {
+      return res.status(400).json({ message: validation.error });
+    }
+
+    if (req.body.placesOffers) {
+      try {
+        await validatePlacesOffers(placesOffers, placeRepository);
+      } catch (err) {
+        return res.status(400).json({ message: err.message });
+      }
+    }
+
+    const updatedEvent = await eventRepository.updateOne(req.body.eventId, req.body);
+
+    return res.status(200).json(updatedEvent);
   });
 
   app.get('/api/event', middleware.isAuthorized, async (req, res) => {

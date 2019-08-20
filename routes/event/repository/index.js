@@ -37,29 +37,25 @@ class EventRepository extends Repository {
     return result.ops[0];
   }
 
-  updateOne(id, { requirements, timeframe }) {
+  async updateOne(id, { requirements, placesOffers, timeframe }) {
     const oid = getObjectId(id);
-    return new Promise((resolve, reject) => {
-      this.model.findOneAndUpdate(
-        {
-          _id: oid,
-        },
-        {
-          $set: {
-            ...(requirements && { requirements }),
-            ...(timeframe && { timeframe }),
-          }
-        },
-        {
-          returnOriginal: false,
-          returnNewDocument: true,
-        },
-        (error, result) => {
-          if (error) reject(error);
-          resolve(result);
-        },
-      );
-    });
+    const result = await this.model.findOneAndUpdate(
+      {
+        _id: oid,
+      },
+      {
+        $set: {
+          ...(requirements && { requirements }),
+          ...(timeframe && { timeframe }),
+          ...(placesOffers && { placesOffers }),
+        }
+      },
+      {
+        returnOriginal: false,
+        returnNewDocument: true,
+      },
+    );
+    return result.value;
   }
 
   findWhere({ id }) {
