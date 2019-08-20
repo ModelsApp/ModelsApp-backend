@@ -61,7 +61,12 @@ const newPlaceExtraRepository = (model) => ({
 
   findOne: (name) => {
     return model.findOne({ name });
-  }
+  },
+
+  findManyByNames: (names) => {
+    const expressions = names.map(name => ({ name }));
+    return model.find({ $or: expressions }).toArray();
+  },
 });
 
 module.exports = newPlaceExtraRepository;

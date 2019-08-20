@@ -55,7 +55,12 @@ const newPlaceTypeRepository = (model) => ({
 
   findOne: (type) => {
     return model.findOne({ type });
-  }
+  },
+
+  findManyByTypes: (types) => {
+    const expressions = types.map(type => ({ type }));
+    return model.find({ $or: expressions }).toArray();
+  },
 });
 
 module.exports = newPlaceTypeRepository;
