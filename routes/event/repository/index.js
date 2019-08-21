@@ -80,6 +80,14 @@ class EventRepository extends Repository {
     return this.model.findOne({ _id: oid });
   }
 
+  deleteOne (id) {
+    const oid = getObjectId(id);
+    if (!oid) {
+      throw new Error('Wrong id!');
+    }
+    return this.model.deleteOne({ _id: oid });
+  }
+
   addPlaceOffers(id, placeOffers) {
     return this._addToArray(id, 'placesOffers', placeOffers);
   }

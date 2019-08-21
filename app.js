@@ -22,9 +22,11 @@ const newIntervalRepository = require('./routes/interval/repository');
 const newDriverRepository = require('./routes/driver/repository');
 const newEventRepository = require('./routes/event/repository');
 const newDriverRideRepository = require('./routes/driverRide/repository');
+const newEventBookingRepository = require('./routes/eventBooking/repository');
 
 const functions = require('./config/intervalFunctions');
 const newPlaceUtil = require('./routes/place/util');
+const newBookingUtil = require('./routes/booking/util');
 
 async function bootstrap() {
   Sentry.init({ dsn: config.sentryUrl });
@@ -32,7 +34,7 @@ async function bootstrap() {
  
   let User, Place, Offer, Counter, Booking, PlaceTimeFrame, City, Driver,
     OfferPost, Interval, SamplePost, ActionPoints, PlaceType, PlaceExtra,
-    Event, DriverRide;
+    Event, DriverRide, EventBooking;
   await new Promise((resolve) => {
     db.getInstance((p_db) => {
       User = p_db.collection('users');
@@ -51,6 +53,7 @@ async function bootstrap() {
       Driver = p_db.collection('drivers');
       Event = p_db.collection('events');
       DriverRide = p_db.collection('driverRides');
+      EventBooking = p_db.collection('eventBookings');
       resolve();
     });
   });
@@ -140,7 +143,21 @@ async function bootstrap() {
     app,
     newDriverRideRepository(DriverRide),
     newDriverRepository(Driver),
+    newEventBookingRepository(EventBooking),
+    newValidator(),
+  );
+  require('./routes/eventBooking')(
+    app,
+    newEventBookingRepository(EventBooking),
+    newEventRepository(Event),
     newUserRepository(User),
+    newBookingUtil(
+      Place,
+      User,
+      Interval,
+      Offer,
+      Booking,
+    ),
     newValidator(),
   );
 

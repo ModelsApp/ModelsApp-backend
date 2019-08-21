@@ -5,7 +5,7 @@ const selectOneSchema = require('./schema/selectOne');
 const bookRideSchema = require('./schema/bookRide');
 const middleware = require('../../config/authMiddleware');
 
-module.exports = (app, driverRideRepository, driverRepository, userRepository, validate) => {
+module.exports = (app, driverRideRepository, driverRepository, eventBookingRepository, validate) => {
   app.post('/api/driver-ride', middleware.isAuthorized, async (req, res) => {
     const validation = validate(req.body, postSchema);
     if (validation.error) {
@@ -57,7 +57,7 @@ module.exports = (app, driverRideRepository, driverRepository, userRepository, v
       return res.status(400).json({ message: validation.error });
     }
 
-    const { id, eventId } = req.body;
+    const { id, eventBookingId } = req.body;
 
     const driverRide = await driverRideRepository.findById(id);
     if (!driverRide) {
@@ -69,8 +69,8 @@ module.exports = (app, driverRideRepository, driverRepository, userRepository, v
     if (driverRide.passengers.find(passenger => passenger.userId === user._id)) {
       return res.status(400).json({ message: 'User already participates in this ride' });
     }
-    await driverRideRepository.addPassenger(id, { userId: user._id, eventId });
-    await userRepository.addRide(user._id, id, eventId);
+    await driverRideRepository.addPassenger(id, { userId: user._id, eventBookingId });
+    await eventBookingRepository.addRide(eventBookingId, id);
 
     return res.status(200).json({ message: 'Ride booked' });
   });
@@ -86,7 +86,7 @@ module.exports = (app, driverRideRepository, driverRepository, userRepository, v
       return res.status(400).json({ message: validation.error });
     }
 
-    const { id, eventId } = req.body;
+    const { id, eventBookingId } = req.body;
 
     const driverRide = await driverRideRepository.findById(id);
     if (!driverRide) {
@@ -95,8 +95,8 @@ module.exports = (app, driverRideRepository, driverRepository, userRepository, v
     if (!driverRide.passengers.find(passenger => passenger.userId === user._id)) {
       return res.status(400).json({ message: 'User does not participate in this ride' });
     }
-    await driverRideRepository.removePassenger(id, { userId: user._id, eventId });
-    await userRepository.removeRide(user._id, id, eventId);
+    await driverRideRepository.removePassenger(id, { userId: user._id, eventBookingId });
+    await eventBookingRepository.removeRide(eventBookingId, id);
 
     return res.status(200).json({ message: 'Ride unbooked' });
   });

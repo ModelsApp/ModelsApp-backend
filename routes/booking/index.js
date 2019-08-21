@@ -3,13 +3,8 @@ const moment = require('moment');
 const crypto = require('crypto');
 
 const db = require('../../config/connection');
-const sendGrid = require('../../lib/sendGrid');
-const entityHelper = require('../../lib/entityHelper');
 const pushProvider = require('../../lib/pushProvider');
-const { SUBSCRIPTION, SUBSCRIPTION_BOOKING_LIMITS } = require('../../config/constant');
-const { ACCESS, BOOKING_LIMIT_PERIODS } = require('../place/constant');
-
-const calculateOfferPoints = require('../actionPoints/calculator/offer');
+const newBookingUtil = require('./util');
 
 let User, Place, Offer, Counter, Booking, OfferPost, Interval, SamplePost;
 db.getInstance(function (p_db) {
@@ -22,6 +17,8 @@ db.getInstance(function (p_db) {
   Interval = p_db.collection('bookingIntervals');
   SamplePost = p_db.collection('sampleposts');
 });
+
+const bookingUtil = newBookingUtil(Place, User, Interval, Offer, Booking);
 
 module.exports = (app, placeUtil) => {
 
@@ -175,10 +172,6 @@ module.exports = (app, placeUtil) => {
     });
   }
 
-  function generateOfferPrices(offers, userLevel) {
-    return offers.map(offer => ({ ...offer, price: calculateOfferPoints(userLevel, offer.level) }));
-  }
-
   // Get the specific Booking
   app.get('/api/place/book/:id', (req, res) => {
     var id = parseInt(req.params.id);
@@ -211,7 +204,7 @@ module.exports = (app, placeUtil) => {
         book.place.photos = book.place.photos[0];
         if (book.offers) {
           book.offers = await Offer.find({_id: {$in: book.offers}}).toArray();
-          book.offers = generateOfferPrices(book.offers, user.level);
+          book.offers = bookingUtil.generateOfferPrices(book.offers, user.level);
           res.json({place: book});
         } else {
           res.json({place: book});
@@ -265,14 +258,18 @@ module.exports = (app, placeUtil) => {
     if (!booking) {
       return res.status(404).json({ message: 'No such booking' });
     }
+    /*
     if (booking.closed) {
       return res.status(500).json({ message: "The booking is closed and could not be deleted" });
     }
+    */
     const timeDiff = moment(booking.date + ' ' + booking.startTime, 'DD-MM-YYYY HH.mm').diff(moment(), 'minutes');
 
+    /*
     if (timeDiff < 60) {
       return res.status(500).json({ message: "Could not be deleted. Less than one hours left" });
     }
+    */
 
     let place = await Place.findOneAndUpdate({ _id: parseInt(booking.place) }, { $pull: { bookings: id } });
     place = place.value;
@@ -305,21 +302,11 @@ module.exports = (app, placeUtil) => {
   });
 
   // Add offer to the booking
-  app.put('/api/place/book/:id/offer', function (req, res) {
-    var id = parseInt(req.params.id);
-    var offer = parseInt(req.body.offerID);
+  app.put('/api/place/book/:id/offer', async (req, res) => {
+    const id = parseInt(req.params.id);
+    const offer = parseInt(req.body.offerID);
 
-    if (!offer) {
-      res.json({message: "Provide an offer ID"});
-    } else {
-      Booking.findOneAndUpdate({_id: id}, {$push: {offers: offer}}, function (err, book) {
-        if (!book.value) {
-          res.json({message: "No such booking"});
-        } else {
-          res.json({message: "Added"});
-        }
-      });
-    }
+    await bookingUtil.addOfferToBooking(id, offer)
   });
 
   // Close the Booooooking
@@ -334,275 +321,25 @@ module.exports = (app, placeUtil) => {
     })
   });
 
-  function subscriptionLimitReached(numBookings, user) {
-    switch (user.subscriptionPlan.subscription) {
-      case SUBSCRIPTION.trial: {
-        if (numBookings >= SUBSCRIPTION_BOOKING_LIMITS.trial) {
-          return true;
-        }
-      }
-      case SUBSCRIPTION.basic: {
-        if (numBookings >= SUBSCRIPTION_BOOKING_LIMITS.basic) {
-          return true;
-        }
-      }
-      case SUBSCRIPTION.premium: {
-        if (numBookings >= SUBSCRIPTION_BOOKING_LIMITS.premium) {
-          return true;
-        }
-      }
-      case SUBSCRIPTION.unlimited: {
-        return false;
-      }
-    }
-  }
-
-  async function venueLimitReached(recentUserBookings, place, user) {
-    let numBookings;
-    if (!place.bookingLimits) {
-      return false;
-    }
-    const userLevel = user.level || 1;
-    let levelBookingLimit = place.bookingLimits[userLevel];
-    if (!levelBookingLimit) {
-      const definedLevels = Object.entries(place.bookingLimits).sort(([k, v], [k2, v2]) => parseInt(k) - parseInt(k2));
-      const firstLargerPair = definedLevels.find(k => parseInt(k[0]) > userLevel);
-      const firstLarger = firstLargerPair ? firstLargerPair[0] : null;
-      const firstSmallerPair = definedLevels.reverse().find(k => parseInt(k[0]) < userLevel);
-      const firstSmaller = firstSmallerPair ? firstSmallerPair[0] : null;
-      if (firstLarger && firstSmaller) {
-        levelBookingLimit = place.bookingLimits[firstSmaller];
-      } else if (firstLarger) {
-        levelBookingLimit = place.bookingLimits[firstLarger];
-      } else if (firstSmaller) {
-        levelBookingLimit = place.bookingLimits[firstSmaller];
-      } else {
-        return false;
-      }
-    }
-    if (!place.bookingLimitsPeriod || place.bookingLimitsPeriod === BOOKING_LIMIT_PERIODS.week) {
-      const recentWeekUserVenueBookings = await Booking.find({
-        user: user._id,
-        creationDate: {
-          $gte: moment.utc().subtract({ days: 7 }).toISOString(),
-        },
-      }).toArray();
-      numBookings = recentWeekUserVenueBookings.filter(booking => booking.place === place._id).length;
-    } else {
-      numBookings = recentUserBookings.filter(booking => booking.place === place._id).length;
-    }
-    if (numBookings >= levelBookingLimit) {
-      return true;
-    }
-
-    return false;
-  }
-
-  async function userBookingsLimitReached(user, place) {
-    // user can reach limit in two ways, he exceeded his monthly subscription bookings limit
-    // or he exceeded his bookings limit for given venue
-    const startMonth = moment.utc().startOf('month').toISOString();
-    const endMonth = moment.utc().endOf('month').toISOString();
-    const recentUserBookings = await Booking.find({
-      user: user._id,
-      creationDate: {
-        $gte: startMonth,
-        $lt: endMonth,
-      },
-    }).toArray();
-
-    let numBookings = recentUserBookings.length;
-    if (subscriptionLimitReached(numBookings, user) || await venueLimitReached(recentUserBookings, place, user)) {
-      return true;
-    }
-
-    return false;
-  }
-
-  async function userCanBook(user, place) {
-    const { subscriptionPlan: { subscription } } = user;
-    if (subscription === SUBSCRIPTION.trial || subscription === SUBSCRIPTION.basic) {
-      if (place.access === ACCESS.basic) {
-        return true;
-      }
-      if (place.access === ACCESS.premium) {
-        return false;
-      }
-    }
-
-    if (subscription === SUBSCRIPTION.premium || subscription === SUBSCRIPTION.unlimited) {
-      return true;
-    }
-
-    return false;
-  }
-
-  function placeAllowsUserGender(place, user) {
-    return place.allows.includes(user.gender);
-  }
-
   app.post('/api/v2/place/:id/book', async (req, res) => {
     let id = parseInt(req.params.id);
-    let userID  = parseInt(req.body.userID);
+    let userID = parseInt(req.body.userID);
     let intervalId = req.body.intervalId;
     let date = moment(req.body.date);
-    let dayWeek = date.format('dddd');
 
-    if(id && userID && intervalId && date.isValid()){
-        let place = await Place.findOne({ _id : id });
-        let user = await User.findOne({_id : userID });
-        let interval = await Interval.findOne({ place : id });
-        let offers = await Offer.find({place: id}).toArray();
-        if (!placeAllowsUserGender(place, user)) {
-          return res.status(403).json({ message: `Venue does not accept user's gender` });
-        }
-        offers = generateOfferPrices(offers, user.level);
-
-        let intervals = interval.intervals.map((interval) => {
-          interval._id = crypto.createHash('sha1').update(`${interval.start}${interval.end}${interval.day}`).digest("hex");
-          return interval;
-        });
-        let choosenInterval =  intervals.find(x=> x._id == intervalId);
-
-        if(place && user && interval && choosenInterval){
-          if(choosenInterval.day && choosenInterval.day == dayWeek){
-            if(moment(`${date.format('YYYY-MM-DD')} ${choosenInterval.start.replace('.',':')}`).isValid()){
-              let fullDate = moment(`${date.format('YYYY-MM-DD')} ${choosenInterval.start.replace('.',':')}`);
-              let timesValidation = await validateTimes(fullDate);
-
-              if(timesValidation.isValid){
-                let userValidation = await validateUserPossibility(fullDate, user, offers, place);
-
-                if(userValidation.isValid){
-                  let validateInterval = await validateIntervalSlots(choosenInterval, fullDate, place);
-
-                  if(validateInterval.free > 0){
-                    if (await userBookingsLimitReached(user, place)) {
-                      return res.status(403).json({ message: 'User has exceeded his bookings limit' });
-                    }
-                    if (!(await userCanBook(user, place))) {
-                      return res.status(403).json({ message: `User's subscription plan is insufficient for this venue` });
-                    }
-                    let newBooking = {
-                      _id: await entityHelper.getNewId('bookingid'),
-                      user: userID,
-                      place: id,
-                      date: moment(fullDate).format('DD-MM-YYYY'),
-                      creationDate: new Date().toISOString(),
-                      closed: false,
-                      claimed: false,
-                      offers: [],
-                      offerActions: [],
-                      year: fullDate.year(),
-                      week: fullDate.isoWeek(),
-                      day: moment(fullDate).format('dddd'),
-                      payed: Math.min(...offers.map(x => x.price)) / 2,
-                      startTime: choosenInterval.start,
-                      endTime: choosenInterval.end
-                  }
-                  await Booking.insertOne(newBooking);
-                  await User.findOneAndUpdate({_id: newBooking.user}, {
-                    $push: { bookings: newBooking._id },
-                    $inc: { credits: parseInt(-1 * newBooking.payed) }
-                  });
-                  await sendBookingEmailMessage(place, newBooking);
-                  return res.status(200).json({ message: 'Booked' });
-                }else{
-                  res.status(400).json({message:  'not enaught slots'});
-                }
-              }else{
-                res.status(400).json({message:  userValidation.error});
-              }
-            }else{
-              res.status(400).json({message:  timesValidation.error});
-            }
-          }else{
-            res.status(400).json({message: "invalid date"});
-          }
-          }else{
-            res.status(400).json({message: "choosend date not match for inteval"});
-          }
-        }else{
-          res.status(404).json({message: "invalid parameters"});
-        }
-    }else{
-      res.status(400).json({message: "invalid parameters"});
+    try {
+      const { fullDate, offers, chosenInterval, place } = await bookingUtil.bookPossible(id, userID, intervalId, date);
+      await bookingUtil.book(id, userID, fullDate, offers, chosenInterval, place);
+    } catch (error) {
+      if (error instanceof Error) {
+        return res.status(400).json({ message: error.message });
+      } else {
+        throw error;
+      }
     }
+
+    return res.status(200).json({ message: 'Booked' });
   });
-
-  validateIntervalSlots = async (choosenInterval, date, place) => {
-    let dayOff = null;
-    if(place.daysOffs) dayOff = place.daysOffs.find(x=> x.date == date.format('DD-MM-YYYY'));
-
-    if(choosenInterval.day == date.format('dddd')){
-      if(dayOff && (dayOff.isWholeDay || dayOff.intervals.filter(x=>x.start == choosenInterval.start && x.end == choosenInterval.end).length > 0)){
-        choosenInterval.free = 0;
-      }else{
-        var taken = await Booking.countDocuments({ place: place._id, date: date.format('DD-MM-YYYY'), startTime: choosenInterval.start, day: choosenInterval.day });
-        choosenInterval.free = choosenInterval.slots - taken;
-      }
-      return choosenInterval;
-    }
-    return choosenInterval;
-  }
-  validateUserPossibility = async (fullDate, user, offers, place) => {
-    let validation = {
-      isValid : false,
-      error: ''
-    }
-    let week = fullDate.isoWeek();
-    let year = fullDate.year();
-    let usersBookingsWeek = await Booking.countDocuments({ user: user._id, year: year , week: week });
-    let usersBookingsWeekPlace = await Booking.countDocuments({ user: user._id, year: year , week: week, place : place._id });
-    let usersBookingsSamePlaceDate = await Booking.countDocuments({ user: user._id, place: place._id, date: {$eq: fullDate.format('DD-MM-YYYY')}  });
-
-    if(usersBookingsSamePlaceDate == 0){
-      if(place.type.toLowerCase() == 'gym' || (place.type.toLowerCase() != 'gym' && usersBookingsWeek < 10 && usersBookingsWeekPlace < 3)){
-        let minOfferPrice =  Math.min(...offers.map(x => x.price)) / 2;
-        if(minOfferPrice <= user.credits){
-          validation.isValid = true;
-        }else{
-          validation.error = 'you dont have enaught credits';
-        }
-      }else{
-        validation.error = 'you arleady made max bookings for this week';
-      }
-    }else{
-      validation.error = 'you arleady made booking today here';
-    }
-    return validation;
-  }
-  validateTimes = async (fullDate) => {
-    let validation = {
-      isValid : false,
-      error: ''
-    }
-    if(fullDate.isValid()){
-      let rightRange = moment().add(7, 'days');
-      var diffSecods = moment.duration(fullDate.diff(moment())).asSeconds();
-
-      //handle 7 days forward
-      if(!fullDate.isAfter(rightRange)){
-        //check if interval is in past
-        if(fullDate.isAfter(moment())){ 
-          // check difference between now and inteval is if is bigger then hour
-          if(diffSecods > 3600){
-            validation.isValid = true;
-          }else{
-            validation.error = "there must be at least on hour before booking"; 
-          }
-        }else{
-          validation.error = "the slot is in the past";
-        }
-      }else{
-        validation.error = "you can book place max 7 days forward";
-      }
-    }else{
-      validation.error = "invalid date";
-    }
-    return validation;
-}
-  
 
   // Create the Booking and link it with User and the Place
   // Using Intervals for it
@@ -628,13 +365,13 @@ module.exports = (app, placeUtil) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    if (!placeAllowsUserGender(p, user)) {
+    if (!bookingUtil.placeAllowsUserGender(p, user)) {
       return res.status(403).json({ message: `Venue does not accept user's gender` });
     }
-    if (await userBookingsLimitReached(user, p)) {
+    if (await bookingUtil.userBookingsLimitReached(user, p)) {
       return res.status(403).json({ message: 'User has exceeded his monthly bookings limit' });
     }
-    if (!(await userCanBook(user, p))) {
+    if (!(await bookingUtil.userCanBook(user, p))) {
       return res.status(403).json({ message: `User's subscription plan is insufficient for this venue` });
     }
 
@@ -662,7 +399,7 @@ module.exports = (app, placeUtil) => {
       } else {
         offers = await Offer.find({place: newBooking.place}, {projection: {level: 1}}).toArray();
       }
-      offers = generateOfferPrices(offers, user.level);
+      offers = bookingUtil.generateOfferPrices(offers, user.level);
       const offerPrices = offers.map(o => o.price);
       minOfferPrice = offerPrices.sort((a, b) => a - b)[0];
 
@@ -725,7 +462,7 @@ module.exports = (app, placeUtil) => {
                                 });
 
                                 Booking.insertOne(newBooking).then((booking) => {
-                                  sendBookingEmailMessage(place, newBooking).then(()=> {
+                                  bookingUtil.sendBookingEmailMessage(place, newBooking).then(()=> {
                                     res.json({message: "Booked"});
                                   });
                                 });
@@ -764,7 +501,7 @@ module.exports = (app, placeUtil) => {
         if (!user) {
           return res.status(404).json({ message: 'User not found' });
         }
-        offers = generateOfferPrices(offers, user.level);
+        offers = bookingUtil.generateOfferPrices(offers, user.level);
         var sum = 0;
         offers.forEach(function (offer) {
           sum += offer.price;
@@ -782,18 +519,4 @@ module.exports = (app, placeUtil) => {
       }
     });
   });
-  sendBookingEmailMessage = async (place, booking) => {
-    let listToSend = [];
-    var user = await User.findOne({_id: booking.user});
-    let line = `booking date: ${ booking.date }, time:  ${booking.startTime }-${booking.endTime },`;
-    if(user){
-      line += ` user:  ${user.email }, ${user.name } ${user.surname } `;
-    }
-    listToSend.push(line);
-    if(place && place.notificationRecivers && Array.isArray(place.notificationRecivers)){
-      place.notificationRecivers.forEach(async (reciver) => {
-        await sendGrid.sendBookingCreated(reciver.email, listToSend, place);
-      });
-    }
-  }
 }

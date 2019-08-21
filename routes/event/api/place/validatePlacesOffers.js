@@ -1,8 +1,8 @@
+const validatePlaceOffer = require('./validatePlaceOffers');
+
 const validatePlacesOffers = async (placesOffers, placeRepository) => {
-  const placeIds = placesOffers.map(placeOffer => placeOffer.placeId);
-  const foundPlaces = await placeRepository.findManyByIds(placeIds);
-  if (foundPlaces.length !== placeIds.length) {
-    throw new Error('Invalid place ids');
+  for (const placeOffer of placesOffers) {
+    await validatePlaceOffer(placeOffer, placeRepository);
   }
 
   return true;

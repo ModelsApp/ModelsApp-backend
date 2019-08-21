@@ -36,12 +36,12 @@ class UserRepository extends Repository {
     return updatedUser.value;
   }
 
-  addRide (id, rideId, eventId) {
-    return this._addToArray(id, 'rides', { rideId, eventId });
+  addEventBooking (id, eventBookingId) {
+    return this._addToArray(id, 'eventBookings', eventBookingId);
   }
 
-  removeRide (id, rideId, eventId) {
-    return this._removeFromArray(id, 'rides', { rideId, eventId });
+  removeEventBooking (id, eventBookingId) {
+    return this._removeFromArray(id, 'eventBookings', eventBookingId);
   }
 }
 
