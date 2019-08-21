@@ -34,7 +34,7 @@ module.exports = (app, eventRepository, placeRepository, validate) => {
     return res.status(201).json(event);
   });
 
-  app.put('/api/event', middleware.isAdmin, async (req, res) => {
+  app.put('/api/event', async (req, res) => {
     const validation = validate(req.body, editSchema);
     if (validation.error) {
       return res.status(400).json({ message: validation.error });

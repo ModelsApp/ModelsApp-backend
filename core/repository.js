@@ -4,6 +4,9 @@ const getObjectId = (id) => {
   if (!id) {
     return null;
   }
+  if (typeof id === 'number') {
+    return id;
+  }
   let oid;
   try {
     oid = new ObjectId(id);

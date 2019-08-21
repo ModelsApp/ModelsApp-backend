@@ -140,6 +140,7 @@ async function bootstrap() {
     app,
     newDriverRideRepository(DriverRide),
     newDriverRepository(Driver),
+    newUserRepository(User),
     newValidator(),
   );
 
