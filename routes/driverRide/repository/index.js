@@ -20,65 +20,21 @@ class DriverRideRepository extends Repository {
     super(model);
   }
 
-  async insertOne({ driverId, from, to, timeframe }) {
+  async insertOne ({ drivers, place, timeframe }) {
     if (timeframe) {
       timeframe.start = moment(timeframe.start).toISOString();
       timeframe.end = moment(timeframe.end).toISOString();
     }
 
     const result = await this.model.insertOne({
-      driverId,
-      from,
-      to,
+      drivers,
+      place,
       timeframe,
-      passengers: [],
+      rides: [],
       createdAt: moment().utc().toISOString(),
     });
 
     return result.ops[0];
-  }
-
-  updateOrCreate(car, name, picture) {
-    return new Promise((resolve, reject) => {
-      this.model.findOneAndUpdate(
-        {
-          name,
-        },
-        {
-          $set: {
-            car,
-            name,
-            picture,
-            createdAt: moment().utc().toISOString(),
-          }
-        },
-        {
-          returnOriginal: false,
-          returnNewDocument: true,
-          upsert: true,
-          new: true,
-        },
-        (error, result) => {
-          if (error) reject(error);
-          resolve(result);
-        },
-      );
-    });
-  }
-
-  findWhere ({ id, driverId }) {
-    const oid = getObjectId(id);
-    return new Promise((resolve, reject) => {
-      this.model.find(
-        {
-        ...(oid && { _id: oid }),
-        ...(driverId && { driverId }),
-        },
-      ).toArray((err, results) => {
-          if (err) reject(err);
-          resolve(results);
-        });
-      });
   }
 
   findById (id) {
@@ -97,7 +53,7 @@ class DriverRideRepository extends Repository {
     return this.model.deleteOne({ _id: oid });
   }
 
-  async updateOne (id, { driverId, from, to, timeframe, passengers }) {
+  async updateOne (id, { drivers, passengers, place, timeframe }) {
     const oid = getObjectId(id);
     const result = await this.this.model.findOneAndUpdate(
       {
@@ -105,11 +61,10 @@ class DriverRideRepository extends Repository {
       },
       {
         $set: {
-          ...(driverId && { driverId }),
-          ...(from && { from }),
-          ...(to && { to }),
-          ...(timeframe && { timeframe }),
+          ...(drivers && { drivers }),
+          ...(place && { place }),
           ...(passengers && { passengers }),
+          ...(timeframe && { timeframe }),
         },
       },
       {
@@ -120,12 +75,21 @@ class DriverRideRepository extends Repository {
     return result.value;
   }
 
-  addPassenger(id, passenger) {
-    return this._addToArray(id, 'passengers', passenger);
+  findWhere({ id }) {
+    const oid = getObjectId(id);
+    return this.model.find(
+        {
+        ...(oid && { _id: oid }),
+        },
+      ).toArray();
+  }
+
+  addRide(id, ride) {
+    return this._addToArray(id, 'rides', ride);
   }
   
-  removePassenger(id, passenger) {
-    return this._removeFromArray(id, 'passengers', passenger);
+  removeRide(id, ride) {
+    return this._removeFromArray(id, 'rides', ride);
   }
 }
 

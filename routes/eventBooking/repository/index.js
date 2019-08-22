@@ -52,8 +52,19 @@ class EventBookingRepository extends Repository {
     return result.value;
   }
 
-  findAllUserEventBookings(userId) {
-    return this.model.find({ userId }).toArray();
+  findWhere({ id, userId }) {
+    const oid = getObjectId(id);
+    return new Promise((resolve, reject) => {
+      this.model.find(
+        {
+        ...(oid && { _id: oid }),
+        ...(userId && { userId }),
+        },
+      ).toArray((err, events) => {
+          if (err) reject(err);
+          resolve(events);
+        });
+      });
   }
 
   findById(id) {
@@ -64,16 +75,16 @@ class EventBookingRepository extends Repository {
     return this.model.findOne({ _id: oid });
   }
 
-  addRide(id, driverRideId) {
-    return this._addToArray(id, 'rides', driverRideId);
+  addRide(id, ride) {
+    return this._addToArray(id, 'rides', ride);
   }
 
   updateRides(id, rides) {
     return this._setField(id, 'rides', rides);
   }
 
-  removeRide(id, driverRideId) {
-    return this._removeFromArray(id, 'rides', driverRideId);
+  removeRide(id, ride) {
+    return this._removeFromArray(id, 'rides', ride);
   }
 
   addBooking(id, bookingId) {

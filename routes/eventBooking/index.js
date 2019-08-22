@@ -32,6 +32,16 @@ module.exports = (app, eventBookingRepository, eventRepository, userRepository, 
 
     const bookingDetails = [];
     for (const booking of bookings) {
+      const placeOffer = event.placesOffers.find(placeOffer => placeOffer.placeId === booking.placeId);
+      if (!placeOffer) {
+        return res.status(400).json({ message: `Place ${booking.placeId} is not part of event` });
+      }
+      if (!booking.offerIds.every(offerId => placeOffer.offerIds.includes(offerId))) {
+        return res.status(400).json({ message: `Some offers are not a part of event dinner` });
+      }
+      if (moment(booking.date).isAfter(moment(event.timeframe.end))) {
+        return res.status(400).json({ message: `Booking cannot happen after event finished` });
+      }
       try {
         const details = await bookingUtil.bookPossible(booking.placeId, user._id, booking.intervalId, moment(booking.date));
         bookingDetails.push({ booking, ...details });
@@ -124,7 +134,12 @@ module.exports = (app, eventBookingRepository, eventRepository, userRepository, 
       return res.status(404).json({ message: 'Unauthorized' });
     }
 
-    const bookings = await eventBookingRepository.findAllUserEventBookings(user._id);
+    const { id } = req.query;
+
+    const bookings = await eventBookingRepository.findWhere({ id, userId: user._id });
+    if (!bookings) {
+      return res.status(404).json({ message: 'Not found' });
+    }
 
     return res.status(200).json(bookings);
   });

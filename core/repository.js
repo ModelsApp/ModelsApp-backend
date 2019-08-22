@@ -35,7 +35,11 @@ class Repository {
     if (!oid) {
       throw new Error('Provide correct id!');
     }
-    const entity = await this.model.findOneAndUpdate({ _id: oid }, { $pull: { [field]: value } }, { returnOriginal: false });
+    let v = getObjectId(value);
+    if (!v) {
+      v = value;
+    }
+    const entity = await this.model.findOneAndUpdate({ _id: oid }, { $pull: { [field]: v } }, { returnOriginal: false });
     return entity.value;
   }
 
@@ -43,6 +47,10 @@ class Repository {
     const oid = getObjectId(id);
     if (!oid) {
       throw new Error('Provide correct id!');
+    }
+    let v = getObjectId(value);
+    if (!v) {
+      v = value;
     }
     const entity = await this.model.findOneAndUpdate({ _id: oid }, { $set: { [field]: value } }, { returnOriginal: false });
     return entity.value;

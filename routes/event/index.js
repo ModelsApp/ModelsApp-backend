@@ -58,13 +58,16 @@ module.exports = (app, eventRepository, placeRepository, validate) => {
 
     if (req.body.placesOffers) {
       try {
-        await validatePlacesOffers(placesOffers, placeRepository);
+        await validatePlacesOffers(req.body.placesOffers, placeRepository);
       } catch (err) {
         return res.status(404).json({ message: err.message });
       }
     }
 
     const updatedEvent = await eventRepository.updateOne(req.body.eventId, req.body);
+    if (!updatedEvent) {
+      return res.status(404).json({ message: 'Wrong id' });
+    }
 
     return res.status(200).json(updatedEvent);
   });
@@ -88,7 +91,7 @@ module.exports = (app, eventRepository, placeRepository, validate) => {
       return res.status(404).json({ message: 'No event with given id' });
     }
     try {
-      await validatePlaceOffers(placesOffers, placeRepository);
+      await validatePlaceOffers(placeOffers, placeRepository);
     } catch (err) {
       return res.status(404).json({ message: err.message });
     }
