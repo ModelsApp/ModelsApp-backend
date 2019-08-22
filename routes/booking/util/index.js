@@ -6,14 +6,17 @@ const entityHelper = require('../../../lib/entityHelper');
 const { SUBSCRIPTION, SUBSCRIPTION_BOOKING_LIMITS } = require('../../../config/constant');
 const calculateOfferPoints = require('../../actionPoints/calculator/offer');
 const { ACCESS, BOOKING_LIMIT_PERIODS } = require('../../place/constant');
+const ErrorResponse = require('./../../../core/errorResponse');
+const pushProvider = require('../../../lib/pushProvider');
 
 class BookingUtil {
-  constructor(Place, User, Interval, Offer, Booking) {
+  constructor(Place, User, Interval, Offer, Booking, placeUtil) {
     this.Place = Place;
     this.User = User;
     this.Interval = Interval;
     this.Offer = Offer;
     this.Booking = Booking;
+    this.placeUtil = placeUtil;
   }
 
   placeAllowsUserGender(place, user) {
@@ -26,7 +29,7 @@ class BookingUtil {
 
   async bookPossible(id, userID, intervalId, date) {
     if(!id || !userID || !intervalId || !date.isValid()){
-      throw new Error('invalid parameters');
+      throw ErrorResponse.BadRequest('invalid parameters');
     }
     const dayWeek = date.format('dddd');
     const place = await this.Place.findOne({ _id : id });
@@ -34,7 +37,7 @@ class BookingUtil {
     const interval = await this.Interval.findOne({ place : id });
     let offers = await this.Offer.find({place: id}).toArray();
     if (!this.placeAllowsUserGender(place, user)) {
-      throw new Error(`Venue does not accept user's gender`);
+      throw ErrorResponse.Unauthorized(`Venue does not accept user's gender`);
     }
     offers = this.generateOfferPrices(offers, user.level);
 
@@ -45,40 +48,40 @@ class BookingUtil {
     const chosenInterval = intervals.find(x => x._id == intervalId);
 
     if (!place || !user || !interval || !chosenInterval) {
-      throw new Error('invalid parameters');
+      throw ErrorResponse.BadRequest('invalid parameters');
     }
 
     if (!chosenInterval.day || chosenInterval.day !== dayWeek) {
-      throw new Error('choosen date does not match interval');
+      throw ErrorResponse.BadRequest('chosen date does not match interval');
     }
 
     if (!moment(`${date.format('YYYY-MM-DD')} ${chosenInterval.start.replace('.',':')}`).isValid()){
-      throw new Error('invalid date');
+      throw ErrorResponse.BadRequest('invalid date');
     }
 
     let fullDate = moment(`${date.format('YYYY-MM-DD')} ${chosenInterval.start.replace('.',':')}`);
     let timesValidation = await this.validateTimes(fullDate);
     if (!timesValidation.isValid) {
-      throw new Error(timesValidation.error);
+      throw ErrorResponse.BadRequest(timesValidation.error);
     }
 
     let userValidation = await this.validateUserPossibility(fullDate, user, offers, place);
     if (!userValidation.isValid) {
-      throw new Error(userValidation.error);
+      throw ErrorResponse.BadRequest(userValidation.error);
     }
 
     let validateInterval = await this.validateIntervalSlots(chosenInterval, fullDate, place);
 
     if (!validateInterval.free > 0) {
-      throw new Error('not enough slots');
+      throw ErrorResponse.Unauthorized('not enough slots');
     }
 
     if (await this.userBookingsLimitReached(user, place)) {
-      throw new Error('User has exceeded his bookings limit');
+      throw ErrorResponse.Unauthorized('User has exceeded his bookings limit');
     }
 
     if (!(await this.userCanBook(user, place))) {
-      throw new Error(`User's subscription plan is insufficient for this venue`);
+      throw ErrorResponse.Unauthorized(`User's subscription plan is insufficient for this venue`);
     }
 
     return { fullDate, offers, chosenInterval, place };
@@ -110,6 +113,49 @@ class BookingUtil {
     await this.sendBookingEmailMessage(place, newBooking);
 
     return booking.ops[0];
+  }
+
+  async unbook(id) {
+    const booking = await this.Booking.findOne({ _id: id });
+    if (!booking) {
+      throw ErrorResponse.NotFound('No such booking');
+    }
+    if (booking.closed) {
+      throw ErrorResponse.Unauthorized('The booking is closed and could not be deleted');
+    }
+    const timeDiff = moment(booking.date + ' ' + booking.startTime, 'DD-MM-YYYY HH.mm').diff(moment(), 'minutes');
+
+    if (timeDiff < 60) {
+      throw ErrorResponse.Unauthorized('Could not be deleted. Less than one hours left');
+    }
+
+    let place = await this.Place.findOneAndUpdate({ _id: parseInt(booking.place) }, { $pull: { bookings: id } });
+    place = place.value;
+    if (!place) {
+      throw ErrorResponse.NotFound('Could not be deleted');
+    }
+
+    const user = await this.User.findOneAndUpdate({ _id: parseInt(booking.user) }, {
+      $pull: { bookings: id },
+      $inc: { credits: booking.payed },
+    });
+
+    if (!user.value) {
+      throw ErrorResponse.NotFound('Could not be deleted');
+    }
+
+    const deleted = await this.Booking.deleteOne({ _id: id });
+    if (deleted.deletedCount === 1) {
+      if (place.notifyUsersBooking && await this.placeUtil.getPlaceFreeSpots(place, booking.date) === 1) {
+        const devicesToNotify = place.notifyUsersBooking[booking.date];
+        if (devicesToNotify) {
+          await pushProvider.freedBookingSpotNotification(devicesToNotify, place);
+        }
+      }
+      return { status: 200, message: { message: 'Deleted' } };
+    } else {
+      throw ErrorResponse.Internal('Not deleted');
+    }
   }
 
   async validateTimes(fullDate) {
@@ -314,4 +360,4 @@ class BookingUtil {
   }
 }
 
-module.exports = (Place, User, Interval, Offer, Booking) => new BookingUtil(Place, User, Interval, Offer, Booking);
+module.exports = (Place, User, Interval, Offer, Booking, placeUtil) => new BookingUtil(Place, User, Interval, Offer, Booking, placeUtil);

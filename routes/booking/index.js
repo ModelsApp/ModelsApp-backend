@@ -3,7 +3,6 @@ const moment = require('moment');
 const crypto = require('crypto');
 
 const db = require('../../config/connection');
-const pushProvider = require('../../lib/pushProvider');
 const newBookingUtil = require('./util');
 
 let User, Place, Offer, Counter, Booking, OfferPost, Interval, SamplePost;
@@ -18,9 +17,9 @@ db.getInstance(function (p_db) {
   SamplePost = p_db.collection('sampleposts');
 });
 
-const bookingUtil = newBookingUtil(Place, User, Interval, Offer, Booking);
-
 module.exports = (app, placeUtil) => {
+
+  const bookingUtil = newBookingUtil(Place, User, Interval, Offer, Booking, placeUtil);
 
   /* migrate creationDate on Booking locally */
   /*
@@ -173,7 +172,7 @@ module.exports = (app, placeUtil) => {
   }
 
   // Get the specific Booking
-  app.get('/api/place/book/:id', (req, res) => {
+  app.get('/api/place/book/:id', (req, res, next) => {
     var id = parseInt(req.params.id);
     Booking.findOne({_id: id}, async function (err, book) {
       if (!book) {
@@ -204,10 +203,14 @@ module.exports = (app, placeUtil) => {
         book.place.photos = book.place.photos[0];
         if (book.offers) {
           book.offers = await Offer.find({_id: {$in: book.offers}}).toArray();
-          book.offers = bookingUtil.generateOfferPrices(book.offers, user.level);
-          res.json({place: book});
+          try {
+            book.offers = bookingUtil.generateOfferPrices(book.offers, user.level);
+          } catch (error) {
+            return next(error);
+          }
+          return res.json({ place: book });
         } else {
-          res.json({place: book});
+          return res.json({ place: book });
         }
       }
     });
@@ -252,61 +255,26 @@ module.exports = (app, placeUtil) => {
   });
 
   // Deletes the booking document and all links to it
-  app.delete('/api/place/book/:id', async (req, res) => {
+  app.delete('/api/place/book/:id', async (req, res, next) => {
     const id = parseInt(req.params.id);
-    const booking = await Booking.findOne({ _id: id });
-    if (!booking) {
-      return res.status(404).json({ message: 'No such booking' });
-    }
-    /*
-    if (booking.closed) {
-      return res.status(500).json({ message: "The booking is closed and could not be deleted" });
-    }
-    */
-    const timeDiff = moment(booking.date + ' ' + booking.startTime, 'DD-MM-YYYY HH.mm').diff(moment(), 'minutes');
-
-    /*
-    if (timeDiff < 60) {
-      return res.status(500).json({ message: "Could not be deleted. Less than one hours left" });
-    }
-    */
-
-    let place = await Place.findOneAndUpdate({ _id: parseInt(booking.place) }, { $pull: { bookings: id } });
-    place = place.value;
-    if (!place) {
-      return res.status(404).json({ message: 'Could not be deleted' });
-    }
-
-    const user = await User.findOneAndUpdate({ _id: parseInt(booking.user) }, {
-      $pull: { bookings: id },
-      $inc: { credits: booking.payed },
-    });
-
-    if (!user.value) {
-      return res.status(404).json({ message: 'Could not be deleted' });
-    }
-
-    const deleted = await Booking.deleteOne({ _id: id });
-    if (deleted.deletedCount === 1) {
-      if (place.notifyUsersBooking && await placeUtil.getPlaceFreeSpots(place, booking.date) === 1) {
-        // send notifications to subscribed users
-        const devicesToNotify = place.notifyUsersBooking[booking.date];
-        if (devicesToNotify) {
-          await pushProvider.freedBookingSpotNotification(devicesToNotify, place);
-        }
-      }
-      return res.status(200).json({ message: 'Deleted' });
-    } else {
-      return res.status(500).json({ message: 'Not deleted' });
+    try {
+      const response = await bookingUtil.unbook(id);
+      return res.status(response.status).json(response.message);
+    } catch (error) {
+      return next(error);
     }
   });
 
   // Add offer to the booking
-  app.put('/api/place/book/:id/offer', async (req, res) => {
-    const id = parseInt(req.params.id);
-    const offer = parseInt(req.body.offerID);
-
-    await bookingUtil.addOfferToBooking(id, offer)
+  app.put('/api/place/book/:id/offer', async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      const offer = parseInt(req.body.offerID);
+  
+      await bookingUtil.addOfferToBooking(id, offer);
+    } catch (error) {
+      next(error);
+    }
   });
 
   // Close the Booooooking
@@ -321,7 +289,7 @@ module.exports = (app, placeUtil) => {
     })
   });
 
-  app.post('/api/v2/place/:id/book', async (req, res) => {
+  app.post('/api/v2/place/:id/book', async (req, res, next) => {
     let id = parseInt(req.params.id);
     let userID = parseInt(req.body.userID);
     let intervalId = req.body.intervalId;
@@ -331,11 +299,7 @@ module.exports = (app, placeUtil) => {
       const { fullDate, offers, chosenInterval, place } = await bookingUtil.bookPossible(id, userID, intervalId, date);
       await bookingUtil.book(id, userID, fullDate, offers, chosenInterval, place);
     } catch (error) {
-      if (error instanceof Error) {
-        return res.status(400).json({ message: error.message });
-      } else {
-        throw error;
-      }
+      next(error);
     }
 
     return res.status(200).json({ message: 'Booked' });
@@ -343,7 +307,7 @@ module.exports = (app, placeUtil) => {
 
   // Create the Booking and link it with User and the Place
   // Using Intervals for it
-  app.post('/api/place/:id/book', async (req, res) => {
+  app.post('/api/place/:id/book', async (req, res, next) => {
     var id = parseInt(req.params.id);
     const { userID } = req.body;
     const p = await Place.findOne({ _id: id });
@@ -365,14 +329,18 @@ module.exports = (app, placeUtil) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    if (!bookingUtil.placeAllowsUserGender(p, user)) {
-      return res.status(403).json({ message: `Venue does not accept user's gender` });
-    }
-    if (await bookingUtil.userBookingsLimitReached(user, p)) {
-      return res.status(403).json({ message: 'User has exceeded his monthly bookings limit' });
-    }
-    if (!(await bookingUtil.userCanBook(user, p))) {
-      return res.status(403).json({ message: `User's subscription plan is insufficient for this venue` });
+    try {
+      if (!bookingUtil.placeAllowsUserGender(p, user)) {
+        return res.status(403).json({ message: `Venue does not accept user's gender` });
+      }
+      if (await bookingUtil.userBookingsLimitReached(user, p)) {
+        return res.status(403).json({ message: 'User has exceeded his monthly bookings limit' });
+      }
+      if (!(await bookingUtil.userCanBook(user, p))) {
+        return res.status(403).json({ message: `User's subscription plan is insufficient for this venue` });
+      }
+    } catch (error) {
+      return next(error);
     }
 
     if (req.body.interval !== undefined && req.body.date && id) {
@@ -399,7 +367,11 @@ module.exports = (app, placeUtil) => {
       } else {
         offers = await Offer.find({place: newBooking.place}, {projection: {level: 1}}).toArray();
       }
-      offers = bookingUtil.generateOfferPrices(offers, user.level);
+      try {
+        offers = bookingUtil.generateOfferPrices(offers, user.level);
+      } catch (error) {
+        return next(error);
+      }
       const offerPrices = offers.map(o => o.price);
       minOfferPrice = offerPrices.sort((a, b) => a - b)[0];
 
@@ -484,7 +456,7 @@ module.exports = (app, placeUtil) => {
     }
   });
 
-  app.put('/api/place/book/:id/claim', function (req, res) {
+  app.put('/api/place/book/:id/claim', function (req, res, next) {
 
     Booking.findOne({_id: parseInt(req.params.id)}, async function (err, book) {
       if (!book) {
@@ -501,7 +473,11 @@ module.exports = (app, placeUtil) => {
         if (!user) {
           return res.status(404).json({ message: 'User not found' });
         }
-        offers = bookingUtil.generateOfferPrices(offers, user.level);
+        try {
+          offers = bookingUtil.generateOfferPrices(offers, user.level);
+        } catch (error) {
+          return next(error);
+        }
         var sum = 0;
         offers.forEach(function (offer) {
           sum += offer.price;

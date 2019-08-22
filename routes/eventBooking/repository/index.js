@@ -32,7 +32,7 @@ class EventBookingRepository extends Repository {
     return result.ops[0];
   }
 
-  async updateOne(id, { rides, offers }) {
+  async updateOne(id, { bookings }) {
     const oid = getObjectId(id);
     const result = await this.model.findOneAndUpdate(
       {
@@ -40,8 +40,7 @@ class EventBookingRepository extends Repository {
       },
       {
         $set: {
-          ...(rides && { rides }),
-          ...(offers && { offers }),
+          ...(bookings && { bookings }),
         }
       },
       {

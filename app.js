@@ -8,6 +8,7 @@ const Sentry = require('@sentry/node');
 
 const db = require('./config/connection');
 const newValidator = require('./lib/validator');
+const ErrorResponse = require('./core/errorResponse');
 
 const newActionPointsRepository = require('./routes/actionPoints/repository');
 const newOfferRepository = require('./routes/offer/repository');
@@ -153,12 +154,19 @@ async function bootstrap() {
     newEventBookingRepository(EventBooking),
     newEventRepository(Event),
     newUserRepository(User),
+    newBookingRepository(Booking),
     newBookingUtil(
       Place,
       User,
       Interval,
       Offer,
       Booking,
+      newPlaceUtil(
+        newBookingRepository(Booking),
+        newIntervalRepository(Interval),
+        newPlaceTypeRepository(PlaceType),
+        newPlaceExtraRepository(PlaceExtra)
+      ),
     ),
     newValidator(),
   );
@@ -170,6 +178,8 @@ async function bootstrap() {
     newDriverRepository(Driver),
     newValidator(),
   );
+
+  addErrorHandling(app);
 
   functions.checkBookingExpired(db);
   functions.sendReportBookingEmail(db);
@@ -191,7 +201,6 @@ function addMiddlewares(app) {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
   app.use(passport.initialize());
-  addErrorHandling(app);
 }
 
 function addErrorHandling(app) {
@@ -207,7 +216,11 @@ function addErrorHandling(app) {
       body: req.body,
     }
     Sentry.captureException(exceptionObject);
-    res.status(500).json({ message: 'Internal server error' });
+    if (err instanceof ErrorResponse) {
+      return res.status(err.status).json({ message: err.message });
+    }
+    console.error(err);
+    return res.status(500).json({ message: 'Internal server error' });
   });
 }
 
