@@ -9,8 +9,9 @@ const oneBookingSchema = require('./schema/oneBooking');
 
 const newPostEventBooking = require('./api/postEvent');
 const newPutEventBooking = require('./api/putEvent');
+const newDeleteEventBooking = require('./api/deleteEvent');
 
-module.exports = (app, eventBookingRepository, eventRepository, userRepository, bookingUtil, validate) => {
+module.exports = (app, eventBookingRepository, eventRepository, bookingUtil, deleteRide, validate) => {
   app.post('/api/event-booking', middleware.isAuthorized, async (req, res, next) => {
     try {
       const user = await req.user;
@@ -28,7 +29,6 @@ module.exports = (app, eventBookingRepository, eventRepository, userRepository, 
       const { status, message } = await newPostEventBooking(
         eventBookingRepository,
         eventRepository,
-        userRepository,
         bookingUtil,
       )(eventId, bookings, user);
 
@@ -64,46 +64,26 @@ module.exports = (app, eventBookingRepository, eventRepository, userRepository, 
     }
   });
 
-  app.delete('/api/event-booking', middleware.isAuthorized, async (req, res) => {
+  app.delete('/api/event-booking', middleware.isAuthorized, async (req, res, next) => {
     try {
       const user = await req.user;
       if (!user) {
-        return res.status(404).json({ message: 'Unauthorized' });
+        throw ErrorResponse.Unauthorized();
       }
   
       const validation = validate(req.body, oneBookingSchema);
       if (validation.error) {
-        return res.status(400).json({ message: validation.error });
+        throw ErrorResponse.BadRequest(validation.error);
       }
       
       const { id } = req.body;
-  
-      const eventBooking = await eventBookingRepository.findById(id);
-      if (!eventBooking) {
-        return res.status(404).json({ message: 'No eventBooking with given id' });
-      }
-      const event = await eventRepository.findById(eventBooking.eventId);
-      if (!_.includes(event.participants, user._id)) {
-        return res.status(400).json({ message: 'User does not participate in this event' });
-      }
-      const duration = moment.duration(moment().diff(event.timeframe.start));
-      const hours = duration.asHours();
-  
-      if (hours > -2) {
-        if (hours >= 0) {
-          return res.status(403).json({ message: `Couldn't unbook event as it has already started` });  
-        }
-        return res.status(403).json({ message: `Couldn't unbook event as it starts in less than 2 hours` });
-      }
-      await eventRepository.unbookEvent(eventBooking.eventId, user._id);
-      // unbook all bookings
-      for (const bookingId of event.bookings) {
-        // call booking util delete
-      }
-      // unbook all driver rides
-      for (const driverRideId of event.rides) {
-        // move dependency to external module call it here
-      }
+
+      await newDeleteEventBooking(
+        eventBookingRepository,
+        eventRepository,
+        bookingUtil,
+        deleteRide,
+      )(id, user._id);
   
       return res.status(200).json({ message: 'Event unbooked' });
     } catch (error) {

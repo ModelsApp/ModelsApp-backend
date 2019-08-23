@@ -35,14 +35,6 @@ class UserRepository extends Repository {
 
     return updatedUser.value;
   }
-
-  addEventBooking (id, eventBookingId) {
-    return this._addToArray(id, 'eventBookings', eventBookingId);
-  }
-
-  removeEventBooking (id, eventBookingId) {
-    return this._removeFromArray(id, 'eventBookings', eventBookingId);
-  }
 }
 
 module.exports = (model) => new UserRepository(model);

@@ -4,6 +4,7 @@ const postSchema = require('./schema/post');
 const selectOneSchema = require('./schema/selectOne');
 const acceptRideSchema = require('./schema/acceptRide');
 const middleware = require('../../config/authMiddleware');
+const newDeleteRide = require('./api/deleteRide');
 
 module.exports = (app, rideRepository, driverRideRepository, eventBookingRepository, driverRepository, validate) => {
   app.post('/api/ride', middleware.isAuthorized, async (req, res) => {
@@ -57,14 +58,7 @@ module.exports = (app, rideRepository, driverRideRepository, eventBookingReposit
     }
     const { id } = req.body;
 
-    const ride = await rideRepository.findById(id);
-    if (!ride) {
-      return res.status(400).json({ message: 'Wrong id!' });
-    }
-
-    await driverRideRepository.removeRide(ride.driverRideId, id);
-    await rideRepository.deleteOne(id);
-    await eventBookingRepository.removeRide(ride.eventBookingId, id);
+    await newDeleteRide(rideRepository, driverRideRepository, eventBookingRepository)(id);
 
     return res.status(200).send({ message: 'Ride deleted' });
   });
@@ -95,6 +89,9 @@ module.exports = (app, rideRepository, driverRideRepository, eventBookingReposit
     }
     if (!await driverRepository.findById(driverId)) {
       return res.status(404).json({ message: 'No driver with given id' });
+    }
+    if (!driverRide.drivers.includes(driverId)) {
+      return res.status(400).json({ message: 'Driver is not part of given driver ride' });
     }
     await rideRepository.accept(id, driverId);
     await driverRideRepository.addRide(ride.driverRideId, id);

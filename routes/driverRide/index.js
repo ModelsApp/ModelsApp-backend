@@ -4,7 +4,7 @@ const postSchema = require('./schema/post');
 const selectOneSchema = require('./schema/selectOne');
 const middleware = require('../../config/authMiddleware');
 
-module.exports = (app, driverRideRepository, driverRepository, eventBookingRepository, validate) => {
+module.exports = (app, driverRideRepository, driverRepository, validate) => {
   app.post('/api/driver-ride', middleware.isAdmin, async (req, res) => {
     const validation = validate(req.body, postSchema);
     if (validation.error) {

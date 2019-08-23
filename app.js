@@ -26,6 +26,8 @@ const newDriverRideRepository = require('./routes/driverRide/repository');
 const newEventBookingRepository = require('./routes/eventBooking/repository');
 const newRideRepository = require('./routes/ride/repository');
 
+const newDeleteRide = require('./routes/ride/api/deleteRide');
+
 const functions = require('./config/intervalFunctions');
 const newPlaceUtil = require('./routes/place/util');
 const newBookingUtil = require('./routes/booking/util');
@@ -149,14 +151,12 @@ async function bootstrap() {
     app,
     newDriverRideRepository(DriverRide),
     newDriverRepository(Driver),
-    newEventBookingRepository(EventBooking, client),
     newValidator(),
   );
   require('./routes/eventBooking')(
     app,
     newEventBookingRepository(EventBooking, client),
     newEventRepository(Event),
-    newUserRepository(User),
     newBookingUtil(
       Place,
       User,
@@ -169,6 +169,11 @@ async function bootstrap() {
         newPlaceTypeRepository(PlaceType),
         newPlaceExtraRepository(PlaceExtra)
       ),
+    ),
+    newDeleteRide(
+      newRideRepository(Ride),
+      newDriverRideRepository(DriverRide),
+      newEventBookingRepository(EventBooking),
     ),
     newValidator(),
   );

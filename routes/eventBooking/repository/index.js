@@ -32,6 +32,14 @@ class EventBookingRepository extends Repository {
     return result.ops[0];
   }
 
+  deleteOne (id) {
+    const oid = getObjectId(id);
+    if (!oid) {
+      throw new Error('Wrong id!');
+    }
+    return this.model.deleteOne({ _id: oid });
+  }
+
   async updateOne(id, { bookings }) {
     const oid = getObjectId(id);
     const result = await this.model.findOneAndUpdate(

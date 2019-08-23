@@ -4,9 +4,6 @@ const getObjectId = (id) => {
   if (!id) {
     return null;
   }
-  if (typeof id === 'number') {
-    return id;
-  }
   let oid;
   try {
     oid = new ObjectId(id);
@@ -36,9 +33,15 @@ class Repository {
     if (!oid) {
       throw new Error('Provide correct id!');
     }
-    let v = getObjectId(value);
-    if (!v) {
+    let v;
+    if (typeof value === 'number') {
       v = value;
+    } else {
+      try {
+        v = String(value);
+      } catch (e) {
+        v = value;
+      }
     }
     const entity = await this.model.findOneAndUpdate({ _id: oid }, { $pull: { [field]: v } }, { returnOriginal: false });
     return entity.value;
