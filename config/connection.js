@@ -5,14 +5,16 @@ var url = config.mongoURI;
 function MongoPool(){}
 
 var p_db;
+let p_client;
 
 function initPool(cb){
   MongoClient.connect(url, { useNewUrlParser: true }, function(err, client) {
+    p_client = client;
     var db = client.db();
     if (err) throw err;
 
     p_db = db;
-    if(cb && typeof(cb) == 'function') cb(p_db);
+    if(cb && typeof(cb) == 'function') cb(p_db, p_client);
   });
   return MongoPool;
 }
@@ -24,7 +26,7 @@ function getInstance(cb){
     initPool(cb);
   }
   else{
-    if(cb && typeof(cb) == 'function') cb(p_db);
+    if(cb && typeof(cb) == 'function') cb(p_db, p_client);
   }
 }
 MongoPool.getInstance = getInstance;

@@ -5,7 +5,7 @@ const selectOneSchema = require('./schema/selectOne');
 const middleware = require('../../config/authMiddleware');
 
 module.exports = (app, driverRideRepository, driverRepository, eventBookingRepository, validate) => {
-  app.post('/api/driver-ride', middleware.isAuthorized, async (req, res) => {
+  app.post('/api/driver-ride', middleware.isAdmin, async (req, res) => {
     const validation = validate(req.body, postSchema);
     if (validation.error) {
       return res.status(400).json({ message: validation.error });
@@ -24,7 +24,7 @@ module.exports = (app, driverRideRepository, driverRepository, eventBookingRepos
     return res.status(201).send(result);
   });
 
-  app.get('/api/driver-ride', middleware.isAuthorized, async (req, res) => {
+  app.get('/api/driver-ride', middleware.isAdmin, async (req, res) => {
     const { id } = req.query;
     
     const result = await driverRideRepository.findWhere({ id });
@@ -32,7 +32,7 @@ module.exports = (app, driverRideRepository, driverRepository, eventBookingRepos
     return res.status(200).send(result);
   });
 
-  app.delete('/api/driver-ride', middleware.isAuthorized, async (req, res) => {
+  app.delete('/api/driver-ride', middleware.isAdmin, async (req, res) => {
     const validation = validate(req.body, selectOneSchema);
     if (validation.error) {
       return res.status(400).json({ message: validation.error });

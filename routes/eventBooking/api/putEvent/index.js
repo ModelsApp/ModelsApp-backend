@@ -5,8 +5,6 @@ const doBookings = require('./../postEvent/doBookings');
 const newPutEventBooking = (
   eventBookingRepository, 
   eventRepository,
-  userRepository,
-  bookingRepository,
   bookingUtil,
 ) => async (id, eventId, bookings, userId) => {
   const foundEventBooking = await eventBookingRepository.findById(id);
@@ -19,19 +17,25 @@ const newPutEventBooking = (
     throw ErrorResponse.NotFound('Wrong eventId');
   }
 
-  const bookingDetails = [];
-  for (const booking of bookings) {
-    // find out what bookings to delete, and what bookings to add
-  }
+  let updatedEventBooking;
 
-  const bookingIds = await doBookings(event, userId, bookings, bookingUtil);
+  await eventBookingRepository.transaction(
+    async () => {
+      let bookingIds;
+      if (Array.isArray(bookings)) {
+        for (const bookingId of foundEventBooking.bookings) {
+          await bookingUtil.unbook(bookingId);
+        }
+        bookingIds = await doBookings(event, userId, bookings, bookingUtil);
+      } else {
+        bookingIds = foundEventBooking.bookings;
+      }
+    
+      updatedEventBooking = await eventBookingRepository
+        .updateOne(id, { bookings: bookingIds });
+    });
 
-  await eventRepository.bookEvent(eventId, userId);
-  const eventBooking = await eventBookingRepository
-    .insertOne({ eventId, bookings: bookingIds, userId });
-  await userRepository.addEventBooking(userId, eventBooking._id);
-
-  return { status: 200, message: eventBooking };
+  return { status: 200, message: updatedEventBooking };
 };
 
 module.exports = newPutEventBooking;

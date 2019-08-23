@@ -17,8 +17,9 @@ const getObjectId = (id) => {
 }
 
 class Repository {
-  constructor(model) {
+  constructor(model, client) {
     this.model = model;
+    this.client = client;
   }
 
   async _addToArray(id, field, value) {
@@ -54,6 +55,26 @@ class Repository {
     }
     const entity = await this.model.findOneAndUpdate({ _id: oid }, { $set: { [field]: value } }, { returnOriginal: false });
     return entity.value;
+  }
+
+  async transaction(fun) {
+    const session = this.client.startSession({ defaultTransactionOptions: {
+      readConcern: { level: 'local' },
+      writeConcern: { w: 'majority' },
+      readPreference: 'primary',
+    }});
+    session.startTransaction();
+
+    try {
+      const result = await fun();
+      await session.commitTransaction();
+      session.endSession();
+      return result;
+    } catch (err) {
+      await session.abortTransaction();
+      session.endSession();
+      throw err;
+    }
   }
 }
 

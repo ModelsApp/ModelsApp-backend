@@ -16,8 +16,8 @@ const getObjectId = (id) => {
 }
 
 class EventBookingRepository extends Repository {
-  constructor(model) {
-    super(model);
+  constructor(model, client) {
+    super(model, client);
   }
 
   async insertOne ({ eventId, userId, bookings }) {
@@ -95,6 +95,6 @@ class EventBookingRepository extends Repository {
   }
 }
 
-const newEventBookingRepository = (model) => new EventBookingRepository(model);
+const newEventBookingRepository = (model, client) => new EventBookingRepository(model, client);
 
 module.exports = newEventBookingRepository;

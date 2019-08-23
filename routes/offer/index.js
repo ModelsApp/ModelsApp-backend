@@ -67,6 +67,10 @@ module.exports = function(app, actionPointsRepository, userRepository, offerRepo
     });
   });
 
+  app.get('/b', async (req, res) => {
+    res.send(await Booking.find({}).toArray());
+  })
+
   //Get all the booking belonging to specified place
   app.get('/api/place/:id/offer', function (req, res) {
     var id = parseInt(req.params.id);
@@ -773,6 +777,10 @@ app.post('/api/offer/:id/booking/:bookingId/post', middleware.isAuthorized, asyn
       res.status(404).json({message : "invalid parameters"});
     }
   });
+
+  app.get('/a', async (re, res) => {
+    return res.send(await Offer.find({}).toArray())
+  })
 
   //edit existing offer
   app.put('/api/offer/:id', async (req,res) => {

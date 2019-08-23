@@ -10,7 +10,7 @@ const oneBookingSchema = require('./schema/oneBooking');
 const newPostEventBooking = require('./api/postEvent');
 const newPutEventBooking = require('./api/putEvent');
 
-module.exports = (app, eventBookingRepository, eventRepository, userRepository, bookingRepository, bookingUtil, validate) => {
+module.exports = (app, eventBookingRepository, eventRepository, userRepository, bookingUtil, validate) => {
   app.post('/api/event-booking', middleware.isAuthorized, async (req, res, next) => {
     try {
       const user = await req.user;
@@ -38,7 +38,7 @@ module.exports = (app, eventBookingRepository, eventRepository, userRepository, 
     }
   });
 
-  app.put('/api/event-booking', middleware.isAuthorized, async (req, res) => {
+  app.put('/api/event-booking', middleware.isAuthorized, async (req, res, next) => {
     try {
       const user = await req.user;
       if (!user) {
@@ -55,8 +55,6 @@ module.exports = (app, eventBookingRepository, eventRepository, userRepository, 
       const { status, message } = await newPutEventBooking(
         eventBookingRepository,
         eventRepository,
-        userRepository,
-        bookingRepository,
         bookingUtil,
       )(id, eventId, bookings, user._id);
 
