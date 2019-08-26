@@ -305,10 +305,6 @@ module.exports = (app, placeUtil) => {
     return res.status(200).json({ message: 'Booked' });
   });
 
-  app.get('/api/fff', async (req, res) => {
-    res.send(await Booking.find({}).toArray())
-  });
-
   // Create the Booking and link it with User and the Place
   // Using Intervals for it
   app.post('/api/place/:id/book', async (req, res, next) => {

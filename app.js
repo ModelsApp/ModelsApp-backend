@@ -139,6 +139,7 @@ async function bootstrap() {
   require('./routes/driver')(
     app,
     newDriverRepository(Driver),
+    newRideRepository(Ride),
     newValidator(),
   );
   require('./routes/event')(

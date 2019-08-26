@@ -12,7 +12,9 @@ var path = require('path');
 var entityHelper = require('../../lib/entityHelper');
 const newPostSubscriptionSchema = require('./schema/postSubscription');
 const newEditUserSchema = require('./schema/editUser');
+const newEditUserAdminSchema = require('./schema/editUserAdmin');
 const { SUBSCRIPTION } = require('./../../config/constant');
+const ErrorResponse = require('./../../core/errorResponse');
 
 var User, Booking, Offer, Place, OfferPost, UserPaymentToken;
 db.getInstance(function (p_db) {
@@ -156,7 +158,7 @@ module.exports = (app, validate) => {
   });
 
   // Edit Current (authenticated) User
-  app.put('/api/user/current', middleware.isAuthorized, async function (req, res) {
+  app.put('/api/user/current', middleware.isAuthorized, async (req, res) => {
     const newUser = req.body;
     const validation = validate(newUser, newEditUserSchema());
     if (validation.error) {
@@ -165,6 +167,20 @@ module.exports = (app, validate) => {
     const user1 = await req.user;
 
     editUser(parseInt(user1._id), newUser, res);
+  });
+
+  app.put('/api/admin/user', middleware.isAdmin, async (req, res, next) => {
+    try {
+      const newUser = req.body;
+      const validation = validate(newUser, newEditUserAdminSchema());
+      if (validation.error) {
+        throw ErrorResponse.BadRequest(validation.error);
+      }
+  
+      editUser(parseInt(req.body.userId), newUser, res);
+    } catch (error) {
+      return next(error);
+    }
   });
 
   // Edit specific User
@@ -519,6 +535,9 @@ function editUser(id, newUser, res) {
       if(newUser.city !== user.city && newUser.city) user.city = newUser.city;
       if(newUser.instagramName !== user.instagramName && newUser.instagramName) user.instagramName = newUser.instagramName;
       if(newUser.level !== user.level && user.level) user.level = newUser.level;
+      if(user.admin !== undefined) user.admin = newUser.admin;
+      if(newUser.driver !== undefined) user.driver = newUser.driver;
+      if(newUser.driverCaptain !== undefined) user.driverCaptain = newUser.driverCaptain;
       // Add a deviceID to the devices array of the User's document
       if(newUser.deviceID) {
         if(user.devices.indexOf(newUser.deviceID) === -1){

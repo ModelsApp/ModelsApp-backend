@@ -31,6 +31,7 @@ class RideRepository extends Repository {
       eventBookingId,
       pending: true,
       driver: null,
+      arrived: false,
       createdAt: moment().utc().toISOString(),
     });
 
@@ -67,19 +68,34 @@ class RideRepository extends Repository {
     return this.model.find({ user, driverRide }).toArray();
   }
 
-  async updateOne (id, { driverRide, fromAddress, toAddress, fromPlace, toPlace }) {
+  async updateOne (id, userId, {
+    driverRideId,
+    from,
+    to,
+    fromPlace,
+    toPlace,
+    eventBookingId,
+    pending,
+    driver,
+    arrived,
+  }) {
     const oid = getObjectId(id);
-    const result = await this.this.model.findOneAndUpdate(
+    const result = await this.model.findOneAndUpdate(
       {
         _id: oid,
+        userId,
       },
       {
         $set: {
-          ...(driverRide && { driverRide }),
-          ...(fromAddress && { fromAddress }),
-          ...(toAddress && { toAddress }),
+          ...(driverRideId && { driverRideId }),
+          ...(from && { from }),
+          ...(to && { to }),
           ...(fromPlace && { fromPlace }),
           ...(toPlace && { toPlace }),
+          ...(eventBookingId && { eventBookingId }),
+          ...(pending && { pending }),
+          ...(driver && { driver }),
+          ...(arrived && { arrived }),
         },
       },
       {
@@ -96,6 +112,10 @@ class RideRepository extends Repository {
       return null;
     }
     return this.model.findOneAndUpdate({ _id: oid }, { $set: { pending: false, driver }});
+  }
+
+  findCurrentDriverRides (driverId) {
+    return this.model.find({ driver: String(driverId), arrived: false }).toArray();
   }
 }
 
