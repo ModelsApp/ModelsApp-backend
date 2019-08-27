@@ -20,13 +20,14 @@ class EventRepository extends Repository {
     super(model);
   }
 
-  async insertOne ({ requirements, placesOffers, timeframe }) {
+  async insertOne ({ placeId, requirements, placesOffers, timeframe }) {
     if (timeframe) {
       timeframe.start = moment(timeframe.start).toISOString();
       timeframe.end = moment(timeframe.end).toISOString();
     }
 
     const result = await this.model.insertOne({
+      placeId,
       requirements,
       placesOffers,
       timeframe,

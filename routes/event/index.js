@@ -18,7 +18,12 @@ module.exports = (app, eventRepository, placeRepository, validate) => {
       return res.status(400).json({ message: validation.error });
     }
 
-    const { requirements, placesOffers, timeframe } = req.body;
+    const { placeId, requirements, placesOffers, timeframe } = req.body;
+
+    const place = await placeRepository.findOne(placeId);
+    if (!place) {
+      return res.status(404).json({ message: 'No such place' });
+    }
 
     try {
       await validatePlacesOffers(placesOffers, placeRepository);
@@ -27,6 +32,7 @@ module.exports = (app, eventRepository, placeRepository, validate) => {
     }
 
     const event = await eventRepository.insertOne({
+      placeId,
       requirements,
       placesOffers,
       timeframe,
