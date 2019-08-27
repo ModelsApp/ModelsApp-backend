@@ -139,7 +139,7 @@ async function bootstrap() {
   require('./routes/driver')(
     app,
     newDriverRepository(Driver),
-    newRideRepository(Ride),
+    newRideRepository(Ride, client),
     newValidator(),
   );
   require('./routes/event')(
@@ -172,7 +172,7 @@ async function bootstrap() {
       ),
     ),
     newDeleteRide(
-      newRideRepository(Ride),
+      newRideRepository(Ride, client),
       newDriverRideRepository(DriverRide),
       newEventBookingRepository(EventBooking),
     ),
@@ -180,7 +180,7 @@ async function bootstrap() {
   );
   require('./routes/ride')(
     app,
-    newRideRepository(Ride),
+    newRideRepository(Ride, client),
     newDriverRideRepository(DriverRide),
     newEventBookingRepository(EventBooking, client),
     newDriverRepository(Driver),

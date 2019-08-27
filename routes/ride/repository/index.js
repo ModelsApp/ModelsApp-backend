@@ -16,11 +16,11 @@ const getObjectId = (id) => {
 }
 
 class RideRepository extends Repository {
-  constructor(model) {
-    super(model);
+  constructor(model, client) {
+    super(model, client);
   }
 
-  async insertOne({ userId, driverRideId, from, to, fromPlace, toPlace, eventBookingId }) {
+  async insertOne({ userId, driverRideId, from, to, fromPlace, toPlace, eventBookingId, pending = true, driver = null }) {
     const result = await this.model.insertOne({
       driverRideId,
       userId,
@@ -29,8 +29,8 @@ class RideRepository extends Repository {
       fromPlace,
       toPlace,
       eventBookingId,
-      pending: true,
-      driver: null,
+      pending,
+      driver,
       arrived: false,
       createdAt: moment().utc().toISOString(),
     });
@@ -119,6 +119,6 @@ class RideRepository extends Repository {
   }
 }
 
-const newRideRepository = (model) => new RideRepository(model);
+const newRideRepository = (model, client) => new RideRepository(model, client);
 
 module.exports = newRideRepository;
