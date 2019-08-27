@@ -21,17 +21,17 @@ module.exports = (bookingRepository, intervalRepository, placeTypeRepository, pl
   },
 
   getPlaceIcons: async (place) => {
-    const placeImages = [];
+    const placeImages = {};
     const placeType = await placeTypeRepository.findOne(place.type);
     if (placeType) {
-      placeImages.push(placeType.image);
+      placeImages.typology = [placeType.image];
     }
     if (place.extra) {
       const extras = await Promise.all(
         place.extra.map(async (extra) => placeExtraRepository.findOne(extra)),
       );
       const extrasImages = extras.filter(e => e).map(extra => extra.image);
-      placeImages.push(...extrasImages);
+      placeImages.extras = extrasImages;
     }
 
     return placeImages;
