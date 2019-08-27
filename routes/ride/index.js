@@ -39,9 +39,14 @@ module.exports = (app, rideRepository, driverRideRepository, eventBookingReposit
   app.get('/api/ride', middleware.isAuthorized, async (req, res) => {
     const user = await req.user;
 
-    const { id } = req.query;
+    const { id, pending } = req.query;
+
+    const query = { id, userId: user._id };
+    if (pending !== undefined) {
+      query.pending = (pending === 'true');
+    }
     
-    const result = await rideRepository.findWhere({ id, userId: user._id });
+    const result = await rideRepository.findWhere(query);
 
     return res.status(200).send(result);
   });
