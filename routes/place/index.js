@@ -410,7 +410,7 @@ module.exports = (
     return query;
   }
   
-  app.get('/api/v2/place', async (req, res) => {
+  app.get('/api/v2/place', middleware.isAuthorized, async (req, res) => {
     const { id, typology, extra, city, timeframe, date } = req.query;
     if (date && !moment(date, 'YYYY-MM-DD').isValid()) {
       return res.status(400).json({ message: 'Incorrect date, use YYYY-MM-DD format' });
