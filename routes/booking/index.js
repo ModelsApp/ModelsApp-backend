@@ -4,6 +4,7 @@ const crypto = require('crypto');
 
 const db = require('../../config/connection');
 const newBookingUtil = require('./util');
+const middleware = require('./../../config/authMiddleware');
 
 let User, Place, Offer, Counter, Booking, OfferPost, Interval, SamplePost;
 db.getInstance(function (p_db) {
@@ -17,9 +18,23 @@ db.getInstance(function (p_db) {
   SamplePost = p_db.collection('sampleposts');
 });
 
-module.exports = (app, placeUtil) => {
+module.exports = (app, bookingRepository, eventBookingRepository, eventRepository, placeUtil) => {
 
   const bookingUtil = newBookingUtil(Place, User, Interval, Offer, Booking, placeUtil);
+
+  /* migrate Booking, add eventBooking field */
+  /*
+  app.get('/api/booking/migrate', async (req, res) => {
+    const a = await Booking.find({}).toArray();
+
+    const ps = await Promise.all(a.map(async (el) => {
+      await Booking.replaceOne({ _id: el._id }, { ...el, eventBooking: false });
+    }));
+
+    res.send(ps);
+  });
+  */
+
 
   /* migrate creationDate on Booking locally */
   /*
@@ -98,6 +113,23 @@ module.exports = (app, placeUtil) => {
       } else {
         res.json({message: "Invalid date format, accepted format is YYYY-DD-MM"});
       }
+    }
+  });
+
+  app.get('/api/booking/my-bookings', middleware.isAuthorized, async (req, res, next) => {
+    try {
+      const user = await req.user;
+      const result = {};
+
+      const regularBookings = await bookingRepository.findAllRegularBookingsForUser(user._id);
+      result.regular = regularBookings;
+
+      let eventBookings = await eventBookingRepository.findAllForUser(user._id);
+      eventBookings = await Promise.all(eventBookings.map(async (eb) => ({ ...eb, event: await eventRepository.findById(eb.eventId) })));
+      result.event = eventBookings;
+      return res.status(200).json(result);
+    } catch (error) {
+      return next(error);
     }
   });
 

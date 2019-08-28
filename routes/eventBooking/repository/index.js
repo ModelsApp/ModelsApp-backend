@@ -101,6 +101,10 @@ class EventBookingRepository extends Repository {
   removeBooking(id, bookingId) {
     return this._removeFromArray(id, 'bookings', bookingId);
   }
+
+  findAllForUser(userId) {
+    return this.model.find({ userId }).toArray();
+  }
 }
 
 const newEventBookingRepository = (model, client) => new EventBookingRepository(model, client);

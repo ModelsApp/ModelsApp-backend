@@ -9,6 +9,10 @@ const newBookingRepository = (model) => ({
 
   findOneAndSet: (id, options) => {
     return model.findOneAndUpdate({ _id: id }, { $set: { ...options } });
+  },
+
+  findAllRegularBookingsForUser: (userId) => {
+    return model.find({ user: userId }, { eventBooking: false }).toArray();
   }
 });
 

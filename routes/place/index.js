@@ -65,7 +65,7 @@ module.exports = (
   });
   */
 
-  app.post('/api/place/notification', async (req, res) => {
+  app.post('/api/place/notification', middleware.isAuthorized, async (req, res) => {
     const validation = validate(req.body, newPostNotificationSchema());
     if (validation.error) {
       return res.status(400).json({ message: validation.error });

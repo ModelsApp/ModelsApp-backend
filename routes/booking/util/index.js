@@ -87,7 +87,7 @@ class BookingUtil {
     return { fullDate, offers, chosenInterval, place };
   }
 
-  async book(id, userID, fullDate, offers, chosenInterval, place) {
+  async book(id, userID, fullDate, offers, chosenInterval, place, eventBooking = false) {
     const newBooking = {
       _id: await entityHelper.getNewId('bookingid'),
       user: userID,
@@ -104,6 +104,7 @@ class BookingUtil {
       payed: Math.min(...offers.map(x => x.price)) / 2,
       startTime: chosenInterval.start,
       endTime: chosenInterval.end,
+      eventBooking,
     }
     const booking = await this.Booking.insertOne(newBooking);
     await this.User.findOneAndUpdate({_id: newBooking.user}, {
