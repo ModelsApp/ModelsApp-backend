@@ -443,7 +443,7 @@ module.exports = (
 
   // Get all Places
   app.get('/api/place', middleware.isAuthorized, async (req, res) => {
-    const { typology, extra, city, timeframe, date } = req.query;
+    const { id, typology, extra, city, timeframe, date } = req.query;
     const query = await getPlaceQuery(id, typology, extra, timeframe, date, city);
 
     try {

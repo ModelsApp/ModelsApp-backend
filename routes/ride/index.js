@@ -60,7 +60,7 @@ module.exports = (app, rideRepository, driverRideRepository, eventBookingReposit
   app.get('/api/ride', middleware.isAuthorized, async (req, res) => {
     const user = await req.user;
 
-    const { id, pending } = req.query;
+    const { id, pending, groupBy } = req.query;
 
     const query = { id, userId: user._id };
     if (pending !== undefined) {

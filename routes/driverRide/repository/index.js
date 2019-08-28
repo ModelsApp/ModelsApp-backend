@@ -16,8 +16,9 @@ const getObjectId = (id) => {
 }
 
 class DriverRideRepository extends Repository {
-  constructor(model) {
+  constructor(model, rideRepository) {
     super(model);
+    this.rideRepository = rideRepository;
   }
 
   async insertOne ({ drivers, place, timeframe }) {
@@ -91,8 +92,23 @@ class DriverRideRepository extends Repository {
   removeRide(id, ride) {
     return this._removeFromArray(id, 'rides', ride);
   }
+
+  joinRides(driverRides) {
+    return Promise.all(
+      driverRides.map(async (dr) => ({
+        ...dr,
+        rides: await Promise.all(
+          dr.rides.map(async (rideId) => await this.rideRepository.findById(rideId))
+        )
+      }),
+      ));
+  }
+
+  findByDriverId(driverId) {
+    return this.model.find({ drivers: String(driverId) }).toArray();
+  }
 }
 
-const newDriverRideRepository = (model) => new DriverRideRepository(model);
+const newDriverRideRepository = (model, rideRepository) => new DriverRideRepository(model, rideRepository);
 
 module.exports = newDriverRideRepository;

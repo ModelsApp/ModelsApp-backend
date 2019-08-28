@@ -24,12 +24,41 @@ module.exports = (app, driverRideRepository, driverRepository, validate) => {
     return res.status(201).send(result);
   });
 
-  app.get('/api/driver-ride', middleware.isAdmin, async (req, res) => {
-    const { id } = req.query;
-    
-    const result = await driverRideRepository.findWhere({ id });
+  app.get('/api/driver-ride', middleware.isAdmin, async (req, res, next) => {
+    try {
+      const { id, groupBy } = req.query;
+      const query = {
+        ...(id && { id }),
+      };
+  
+      let result;
+  
+      switch (groupBy) {
+        case 'timeframe': {
+          result = await driverRideRepository.findWhere(query);
+          result = await driverRideRepository.joinRides(result);
+          break;          
+        }
+        case 'driver': {
+          result = await driverRepository.find({});
+          result = await Promise.all(result.map(async (driver) => {
+            const driverRides = await driverRideRepository.findByDriverId(driver._id);
+            const driverRidesJoined = await driverRideRepository.joinRides(driverRides);
 
-    return res.status(200).send(result);
+            return { ...driver, driverRides: driverRidesJoined };
+          }))
+          break;
+        }
+        default: {
+          result = await driverRideRepository.findWhere(query);
+        }
+      }
+    
+  
+      return res.status(200).send(result);
+    } catch (error) {
+      return next(error);
+    }
   });
 
   app.delete('/api/driver-ride', middleware.isAdmin, async (req, res) => {
