@@ -16,8 +16,9 @@ const getObjectId = (id) => {
 }
 
 class RideRepository extends Repository {
-  constructor(model, client) {
+  constructor(model, client, driverRideRepository) {
     super(model, client);
+    this.driverRideRepository = driverRideRepository;
   }
 
   async insertOne({ userId, driverRideId, from, to, fromPlace, toPlace, eventBookingId, pending = true, driver = null }) {
@@ -118,8 +119,12 @@ class RideRepository extends Repository {
   findCurrentDriverRides (driverId) {
     return this.model.find({ driver: String(driverId), arrived: false }).toArray();
   }
+
+  async joinDriverRide (ride) {
+    return { ...ride, driverRide: await this.driverRideRepository.findById(ride.driverRideId) };
+  }
 }
 
-const newRideRepository = (model, client) => new RideRepository(model, client);
+const newRideRepository = (model, client, driverRideRepository) => new RideRepository(model, client, driverRideRepository);
 
 module.exports = newRideRepository;

@@ -1,4 +1,8 @@
 const newBookingRepository = (model) => ({
+  findManyByIds: (ids) => {
+    return model.find({ _id: { $in: ids } }).toArray();
+  },
+
   findOneById: (id) => {
     return model.findOne({ _id: id });
   },

@@ -10,6 +10,7 @@ const removePlaceSchema = require('./schema/place/removePlace');
 const oneEventSchema = require('./schema/bookEvent');
 const validatePlacesOffers = require('./api/place/validatePlacesOffers');
 const validatePlaceOffers = require('./api/place/validatePlaceOffers');
+const ErrorResponse = require('./../../core/errorResponse');
 
 module.exports = (app, eventRepository, placeRepository, validate) => {
   app.post('/api/event', middleware.isAdmin, async (req, res) => {

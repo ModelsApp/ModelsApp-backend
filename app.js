@@ -142,7 +142,7 @@ async function bootstrap() {
   require('./routes/driver')(
     app,
     newDriverRepository(Driver),
-    newRideRepository(Ride, client),
+    newRideRepository(Ride, client, newDriverRideRepository(DriverRide)),
     newValidator(),
   );
   require('./routes/event')(
@@ -153,14 +153,17 @@ async function bootstrap() {
   );
   require('./routes/driverRide')(
     app,
-    newDriverRideRepository(DriverRide, newRideRepository(Ride)),
+    newDriverRideRepository(DriverRide, newRideRepository(Ride, client, newDriverRideRepository(DriverRide))),
     newDriverRepository(Driver),
     newValidator(),
   );
   require('./routes/eventBooking')(
     app,
     newEventBookingRepository(EventBooking, client),
+    newPlaceRepository(Place),
     newEventRepository(Event),
+    newBookingRepository(Booking),
+    newRideRepository(Ride, client, newDriverRideRepository(DriverRide)),
     newBookingUtil(
       Place,
       User,
@@ -175,16 +178,16 @@ async function bootstrap() {
       ),
     ),
     newDeleteRide(
-      newRideRepository(Ride, client),
-      newDriverRideRepository(DriverRide, newRideRepository(Ride),),
+      newRideRepository(Ride, client, newDriverRideRepository(DriverRide)),
+      newDriverRideRepository(DriverRide, newRideRepository(Ride, client, newDriverRideRepository(DriverRide))),
       newEventBookingRepository(EventBooking),
     ),
     newValidator(),
   );
   require('./routes/ride')(
     app,
-    newRideRepository(Ride, client),
-    newDriverRideRepository(DriverRide, newRideRepository(Ride),),
+    newRideRepository(Ride, client, newDriverRideRepository(DriverRide)),
+    newDriverRideRepository(DriverRide, newRideRepository(Ride, client, newDriverRideRepository(DriverRide))),
     newEventBookingRepository(EventBooking, client),
     newDriverRepository(Driver),
     newValidator(),
