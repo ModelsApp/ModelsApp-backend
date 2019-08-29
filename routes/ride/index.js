@@ -60,11 +60,20 @@ module.exports = (app, rideRepository, driverRideRepository, eventBookingReposit
   app.get('/api/ride', middleware.isAuthorized, async (req, res) => {
     const user = await req.user;
 
-    const { id, pending, groupBy } = req.query;
+    const { id, pending, filter } = req.query;
 
     const query = { id, userId: user._id };
     if (pending !== undefined) {
       query.pending = (pending === 'true');
+    }
+    if (filter) {
+      if (filter === 'oneWay') {
+        query.fromPlace = null;
+        query.toPlace = { $ne: null };
+      } else if (filter === 'return') {
+        query.fromPlace =  { $ne: null };
+        query.toPlace = null;
+      }
     }
     
     const result = await rideRepository.findWhere(query);

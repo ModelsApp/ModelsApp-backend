@@ -47,13 +47,15 @@ class RideRepository extends Repository {
     return this.model.findOne({ _id: oid });
   }
 
-  findWhere({ id, userId, pending }) {
+  findWhere({ id, userId, pending, fromPlace, toPlace }) {
     const oid = getObjectId(id);
     return this.model.find(
         {
         ...(oid && { _id: oid }),
         ...(userId && { userId }),
         ...(pending && { pending }),
+        ...(fromPlace !== undefined && { fromPlace }),
+        ...(toPlace !== undefined && { toPlace }),
         },
       ).toArray();
   }

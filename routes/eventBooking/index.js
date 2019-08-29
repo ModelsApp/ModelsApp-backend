@@ -74,11 +74,7 @@ module.exports = (app, eventBookingRepository, placeRepository, eventRepository,
         })),
       };
 
-      const oneWayRide = eventBooking.rides.find((ride) => !ride.fromPlace && ride.toPlace);
-      eventBooking = {
-        ...eventBooking,
-        oneWayRide,
-      };
+
 
       const transferRides = eventBooking.rides.filter((ride) => ride.fromPlace && ride.toPlace);
       if (transferRides.length) {
