@@ -294,28 +294,28 @@ module.exports = (
   });
  
   // Get concrete Place and give it Offers, Bookings and Intervals from another entities
-  app.get('/api/place/:id', function (req, res) {
-    var id = parseInt(req.params.id);
-    Place.findOne({ _id: id, isActive : true }, { projection: { client: 0 }}, async function (err, place) {
-      if(!place){
-        res.json({ message: "No such place" });
-      } else {
-        var interval = await Interval.findOne({ place: place._id });
-        var books = await Booking.find({ place: place._id, closed: false }).toArray();
-        var offers = await Offer.find({ place: place._id, closed: false }).sort({ price: 1 }).toArray();
+  app.get('/api/place/:id', async (req, res) => {
+    const id = parseInt(req.params.id);
+    const place = await Place.findOne({ _id: id, isActive : true }, { projection: { client: 0 }});
+    if (!place) {
+      return res.status(404).json({ message: 'No such place' });
+    }
+    const interval = await Interval.findOne({ place: place._id });
+    const books = await Booking.find({ place: place._id, closed: false }).toArray();
+    const offers = await Offer.find({ place: place._id, closed: false }).sort({ price: 1 }).toArray();
 
-        place.minOffer = null;
-        if(offers.length !== 0) {
-          place.minOffer = offers[0]['price'];
-        }
+    place.minOffer = null;
+    if(offers.length !== 0) {
+      place.minOffer = offers[0]['price'];
+    }
 
-        if(interval) place.intervals = interval.intervals;
-        place.bookings = books;
-        place.offers = offers;
-        res.json(place);
-      }
-    });
+    if(interval) place.intervals = interval.intervals;
+    place.bookings = books;
+    place.offers = offers;
+    const icons = await placeUtil.getPlaceIcons(place);
+    res.status(200).json({ ...place, icons });
   });
+
   app.post('/api/place/:id/notificationRecivers', async (req, res) => {
     var id = parseInt(req.params.id);
     if(id){
