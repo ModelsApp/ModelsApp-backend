@@ -48,7 +48,7 @@ class BookingUtil {
     const chosenInterval = intervals.find(x => x._id == intervalId);
 
     if (!place || !user || !interval || !chosenInterval) {
-      throw ErrorResponse.BadRequest('invalid parameters');
+      throw ErrorResponse.BadRequest('invalid interval');
     }
 
     if (!chosenInterval.day || chosenInterval.day !== dayWeek) {
@@ -88,6 +88,9 @@ class BookingUtil {
   }
 
   async book(id, userID, fullDate, offers, chosenInterval, place, eventBooking = false) {
+    if (!place.isActive) {
+      throw ErrorResponse.Unauthorized('Cannot book inactive place');
+    }
     const newBooking = {
       _id: await entityHelper.getNewId('bookingid'),
       user: userID,

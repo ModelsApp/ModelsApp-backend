@@ -218,7 +218,7 @@ module.exports = (
           res.status(500).json({message : "invalid body"})
         }else{
 
-          if(newPlace.isActive !== place.isActive && newPlace.isActive) place.isActive = newPlace.isActive;
+          if(newPlace.isActive !== place.isActive) place.isActive = newPlace.isActive;
           if(newPlace.phone !== place.phone && newPlace.phone) place.phone = newPlace.phone;
           if(newPlace.instapage !== place.instapage && newPlace.instapage) place.instapage = newPlace.instapage;
           if(newPlace.name !== place.name && newPlace.name) place.name = newPlace.name;

@@ -451,8 +451,11 @@ module.exports = (app, bookingRepository, eventBookingRepository, eventRepositor
                               res.json({message: "No such user"});
                             } else {
                               if (user.credits < minOfferPrice) {
-                                res.status(402);
-                                res.json({message: "Sorry, you have not enough credits to book place and take the cheapeste."});
+                                res
+                                  .status(402)
+                                  .json({
+                                    message: "Sorry, you don't have enough credits.",
+                                  });
                               } else {
                                 newBooking.payed = parseInt(minOfferPrice / 2);
   
