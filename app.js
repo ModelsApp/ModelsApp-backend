@@ -180,6 +180,7 @@ async function bootstrap() {
     newEventRepository(),
     newPlaceRepository(),
     newRequirementRepository(),
+    newBookingUtil(),
     newValidator(),
   );
   require('./routes/driverRide')(

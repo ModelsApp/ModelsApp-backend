@@ -1,13 +1,13 @@
 const Joi = require('@hapi/joi');
 
 const timeframe = require('../timeframe');
-const placeOffers = require('./../place/placeOffers');
+const newPlaceOffers = require('./../place/placeOffers');
 const generateRequirements = require('./requirements');
 
-const newSchema = (requirements) => Joi.object().keys({
+const newSchema = (requirements, intervalIds) => Joi.object().keys({
   placeId: Joi.number().integer().strict().required(),
   requirements: Joi.object().keys(generateRequirements(requirements)).required(),
-  placesOffers: Joi.array().items(placeOffers).required(),
+  placesOffers: Joi.array().items(newPlaceOffers(intervalIds)).required(),
   timeframe,
 });
 

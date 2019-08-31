@@ -1,10 +1,10 @@
 const Joi = require('@hapi/joi');
 
-const placeOffers = require('./../placeOffers');
+const newPlaceOffers = require('./../placeOffers');
 
-const schema = Joi.object().keys({
+const newSchema = (intervalIds) => Joi.object().keys({
   id: Joi.string().strict().required(),
-  placeOffers: placeOffers.required(),
+  placeOffers: newPlaceOffers(intervalIds).required(),
 });
 
-module.exports = schema;
+module.exports = newSchema;

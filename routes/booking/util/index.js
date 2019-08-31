@@ -26,6 +26,15 @@ class BookingUtil {
   generateOfferPrices(offers, userLevel) {
     return offers.map(offer => ({ ...offer, price: calculateOfferPoints(userLevel, offer.level) }));
   }
+  
+  async getPlaceIntervals(placeId) {
+    const interval = await this.Interval.findOne({ place: placeId });
+    const intervals = interval.intervals.map((interval) => {
+      interval._id = crypto.createHash('sha1').update(`${interval.start}${interval.end}${interval.day}`).digest("hex");
+      return interval;
+    });
+    return intervals;
+  }
 
   async bookPossible(id, userID, intervalId, date) {
     if(!id || !userID || !intervalId || !date.isValid()){
@@ -34,17 +43,13 @@ class BookingUtil {
     const dayWeek = date.format('dddd');
     const place = await this.Place.findOne({ _id : id });
     const user = await this.User.findOne({_id : userID });
-    const interval = await this.Interval.findOne({ place : id });
     let offers = await this.Offer.find({place: id}).toArray();
     if (!this.placeAllowsUserGender(place, user)) {
       throw ErrorResponse.Unauthorized(`Venue does not accept user's gender`);
     }
     offers = this.generateOfferPrices(offers, user.level);
 
-    const intervals = interval.intervals.map((interval) => {
-      interval._id = crypto.createHash('sha1').update(`${interval.start}${interval.end}${interval.day}`).digest("hex");
-      return interval;
-    });
+    const intervals = await this.getPlaceIntervals(id)
     const chosenInterval = intervals.find(x => x._id == intervalId);
 
     if (!place || !user || !interval || !chosenInterval) {

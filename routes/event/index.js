@@ -4,18 +4,19 @@ const moment = require('moment');
 const middleware = require('../../config/authMiddleware');
 const newPostSchema = require('./schema/postEvent');
 const newEditSchema = require('./schema/editEvent');
-const addPlaceSchema = require('./schema/place/addPlace');
-const updatePlacesSchema = require('./schema/place/updatePlaces');
+const newAddPlaceSchema = require('./schema/place/addPlace');
+const newUpdatePlacesSchema = require('./schema/place/updatePlaces');
 const removePlaceSchema = require('./schema/place/removePlace');
 const oneEventSchema = require('./schema/bookEvent');
 const validatePlacesOffers = require('./api/place/validatePlacesOffers');
 const validatePlaceOffers = require('./api/place/validatePlaceOffers');
 const ErrorResponse = require('./../../core/errorResponse');
 
-module.exports = (app, eventRepository, placeRepository, requirementRepository, validate) => {
+module.exports = (app, eventRepository, placeRepository, requirementRepository, bookUtil, validate) => {
   app.post('/api/event', middleware.isAdmin, async (req, res) => {
     const allRequirements = await requirementRepository.getAll();
-    const validation = validate(req.body, newPostSchema(allRequirements));
+    const intervalIds = (await bookUtil.getPlaceIntervals(req.body.placeId)).map(i => i._id);
+    const validation = validate(req.body, newPostSchema(allRequirements, intervalIds));
     if (validation.error) {
       return res.status(400).json({ message: validation.error });
     }
@@ -89,7 +90,8 @@ module.exports = (app, eventRepository, placeRepository, requirementRepository, 
   });
 
   app.post('/api/event/place', middleware.isAdmin, async (req, res) => {
-    const validation = validate(req.body, addPlaceSchema);
+    const intervalIds = (await bookUtil.getPlaceIntervals(req.body.placeId)).map(i => i._id);
+    const validation = validate(req.body, newAddPlaceSchema(intervalIds));
     if (validation.error) {
       return res.status(400).json({ message: validation.error });
     }
@@ -111,7 +113,8 @@ module.exports = (app, eventRepository, placeRepository, requirementRepository, 
   });
 
   app.put('/api/event/place', middleware.isAdmin, async (req, res) => {
-    const validation = validate(req.body, updatePlacesSchema);
+    const intervalIds = (await bookUtil.getPlaceIntervals(req.body.placeId)).map(i => i._id);
+    const validation = validate(req.body, newUpdatePlacesSchema(intervalIds));
     if (validation.error) {
       return res.status(400).json({ message: validation.error });
     }
