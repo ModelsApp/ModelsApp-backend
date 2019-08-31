@@ -5,11 +5,13 @@ const locationSchema = Joi.object().keys({
   latitude: Joi.number().required(),
 });
 
-module.exports = {
-  driverRideId: Joi.string().strict().required(),
-  from: locationSchema.required(),
-  to: locationSchema.required(),
+const schema = Joi.object().keys({
+  rideId: Joi.string().strict().required(),
+  driverRideId: Joi.string().strict(),
+  from: locationSchema,
+  to: locationSchema,
   fromPlace: Joi.number().integer().strict(),
   toPlace: Joi.number().integer().strict(),
-  eventBookingId: Joi.string().strict().required(),
-};
+}).min(2);
+
+module.exports = schema;

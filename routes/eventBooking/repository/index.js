@@ -26,6 +26,7 @@ class EventBookingRepository extends Repository {
       userId,
       rides: [],
       bookings: bookings || [],
+      rideChanges: 0,
       createdAt: moment().utc().toISOString(),
     });
 
@@ -57,6 +58,24 @@ class EventBookingRepository extends Repository {
       },
     );
     return result.value;
+  }
+
+  incrementRideChanges(id) {
+    const oid = getObjectId(id);
+    return this.model.findOneAndUpdate(
+      {
+        _id: oid,
+      },
+      {
+        $inc: {
+          rideChanges: 1,
+        }
+      },
+      {
+        returnOriginal: false,
+        returnNewDocument: true,
+      },
+    );
   }
 
   findWhere({ id, userId }) {

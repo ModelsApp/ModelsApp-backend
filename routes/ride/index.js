@@ -3,6 +3,7 @@ const _ = require('lodash');
 const postSchema = require('./schema/post');
 const selectOneSchema = require('./schema/selectOne');
 const acceptRideSchema = require('./schema/acceptRide');
+const editRideSchema = require('./schema/editRide');
 const middleware = require('../../config/authMiddleware');
 const newDeleteRide = require('./api/deleteRide');
 const ErrorResponse = require('./../../core/errorResponse');
@@ -10,6 +11,7 @@ const newPostRide = require('./api/postRide');
 const newAcceptRide = require('./api/acceptRide');
 const newValidateDriverRide = require('./api/acceptRide/validateDriverRide');
 const newHandleRelations = require('./api/acceptRide/handleRelations');
+const { MAX_RIDE_CHANGES } = require('./constant');
 
 module.exports = (app, rideRepository, driverRideRepository, eventBookingRepository, driverRepository, validate) => {
   app.post('/api/ride', middleware.isAuthorized, async (req, res, next) => {
@@ -91,6 +93,7 @@ module.exports = (app, rideRepository, driverRideRepository, eventBookingReposit
       const { id } = req.body;
   
       await newDeleteRide(rideRepository, driverRideRepository, eventBookingRepository)(id, user._id);
+      await eventBookingRepository.incrementRideChanges(ride.eventBookingId);
   
       return res.status(200).send({ message: 'Ride deleted' }); 
     } catch (error) {
@@ -141,6 +144,40 @@ module.exports = (app, rideRepository, driverRideRepository, eventBookingReposit
       }
 
       return res.status(200).json(result);
+    } catch (error) {
+      return next(error);
+    }
+  });
+
+  app.put('/api/ride', middleware.isAuthorized, async (req, res, next) => {
+    try {
+      const user = await req.user;
+
+      const validation = validate(req.body, editRideSchema);
+      if (validation.error) {
+        throw ErrorResponse.BadRequest(validation.error);
+      }
+  
+      const { rideId } = req.body;
+      const ride = await rideRepository.findById(rideId);
+  
+      if (!ride || ride.userId !== user._id) {
+        throw ErrorResponse.NotFound('Incorrect ride id');
+      }
+
+      const eventBooking = await eventBookingRepository.findById(ride.eventBookingId);
+      const rideChanges = eventBooking.rideChanges || 0;
+      if (rideChanges >= MAX_RIDE_CHANGES) {
+        throw ErrorResponse.Unauthorized('You have reached your ride changes limit!');
+      }
+  
+      const updatedRide = await rideRepository.updateOne(rideId, user._id, req.body);
+      await eventBookingRepository.incrementRideChanges(ride.eventBookingId);
+  
+      return res.status(200).json({
+        message: `Remaining ride changes: ${MAX_RIDE_CHANGES - rideChanges - 1}`,
+        data: updatedRide,
+      });
     } catch (error) {
       return next(error);
     }
