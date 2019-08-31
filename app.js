@@ -10,27 +10,28 @@ const db = require('./config/connection');
 const newValidator = require('./lib/validator');
 const ErrorResponse = require('./core/errorResponse');
 
-const newActionPointsRepository = require('./routes/actionPoints/repository');
-const newOfferRepository = require('./routes/offer/repository');
-const newUserRepository = require('./routes/user/repository');
-const newPlaceRepository = require('./routes/place/repository');
-const newPlaceTypeRepository = require('./routes/placeType/repository');
-const newPlaceExtraRepository = require('./routes/placeExtra/repository');
-const newPlaceTimeFrameRepository = require('./routes/placeTimeFrame/repository');
-const newCityRepository = require('./routes/city/repository');
-const newBookingRepository = require('./routes/booking/repository');
-const newIntervalRepository = require('./routes/interval/repository');
-const newDriverRepository = require('./routes/driver/repository');
-const newEventRepository = require('./routes/event/repository');
-const newDriverRideRepository = require('./routes/driverRide/repository');
-const newEventBookingRepository = require('./routes/eventBooking/repository');
-const newRideRepository = require('./routes/ride/repository');
+const actionPointsRepository = require('./routes/actionPoints/repository');
+const offerRepository = require('./routes/offer/repository');
+const userRepository = require('./routes/user/repository');
+const placeRepository = require('./routes/place/repository');
+const placeTypeRepository = require('./routes/placeType/repository');
+const placeExtraRepository = require('./routes/placeExtra/repository');
+const placeTimeFrameRepository = require('./routes/placeTimeFrame/repository');
+const cityRepository = require('./routes/city/repository');
+const bookingRepository = require('./routes/booking/repository');
+const intervalRepository = require('./routes/interval/repository');
+const driverRepository = require('./routes/driver/repository');
+const eventRepository = require('./routes/event/repository');
+const driverRideRepository = require('./routes/driverRide/repository');
+const eventBookingRepository = require('./routes/eventBooking/repository');
+const rideRepository = require('./routes/ride/repository');
+const requirementRepository = require('./routes/requirement/repository');
 
-const newDeleteRide = require('./routes/ride/api/deleteRide');
+const deleteRide = require('./routes/ride/api/deleteRide');
 
 const functions = require('./config/intervalFunctions');
-const newPlaceUtil = require('./routes/place/util');
-const newBookingUtil = require('./routes/booking/util');
+const placeUtil = require('./routes/place/util');
+const bookingUtil = require('./routes/booking/util');
 
 async function bootstrap() {
   let client;
@@ -39,7 +40,7 @@ async function bootstrap() {
  
   let User, Place, Offer, Counter, Booking, PlaceTimeFrame, City, Driver,
     OfferPost, Interval, SamplePost, ActionPoints, PlaceType, PlaceExtra,
-    Event, DriverRide, EventBooking, Ride;
+    Event, DriverRide, EventBooking, Ride, Requirement;
   await new Promise((resolve) => {
     db.getInstance((p_db, c) => {
       User = p_db.collection('users');
@@ -60,11 +61,49 @@ async function bootstrap() {
       DriverRide = p_db.collection('driverRides');
       EventBooking = p_db.collection('eventBookings');
       Ride = p_db.collection('rides');
+      Requirement = p_db.collection('requirements');
 
       client = c;
       resolve();
     });
   });
+
+  const newEventBookingRepository = () => eventBookingRepository(EventBooking, client);
+  const newActionPointsRepository = () => actionPointsRepository(ActionPoints);
+  const newUserRepository = () => userRepository(User);
+  const newOfferRepository = () => offerRepository(Offer);
+  const newBookingRepository = () => bookingRepository(Booking);
+  const newEventRepository = () => eventRepository(Event);
+  const newIntervalRepository = () => intervalRepository(Interval);
+  const newPlaceTypeRepository = () => placeTypeRepository(PlaceType);
+  const newPlaceExtraRepository = () => placeExtraRepository(PlaceExtra);
+  const newPlaceRepository = () => placeRepository(Place);
+  const newPlaceTimeFrameRepository = () => placeTimeFrameRepository(PlaceTimeFrame);
+  const newCityRepository = () => cityRepository(City);
+  const newRideRepository = () => rideRepository(Ride, client, newDriverRideRepository());
+  const newDriverRepository = () => driverRepository(Driver);
+  const newDriverRideRepository = () => driverRideRepository(DriverRide, rideRepository(Ride));
+  const newRequirementRepository = () => requirementRepository(Requirement);
+
+  const newPlaceUtil = () => placeUtil(
+    newBookingRepository(),
+    newIntervalRepository(),
+    newPlaceTypeRepository(),
+    newPlaceExtraRepository(),
+  );
+  const newBookingUtil = () => bookingUtil(
+    Place,
+    User,
+    Interval,
+    Offer,
+    Booking,
+    newPlaceUtil(),
+  );
+  const newDeleteRide = () => deleteRide(
+    newRideRepository(),
+    newDriverRideRepository(),
+    newEventBookingRepository(),
+  );
 
   addMiddlewares(app);
 
@@ -80,37 +119,27 @@ async function bootstrap() {
   require('./routes/client')(app);
   require('./routes/offer')(
     app,
-    newActionPointsRepository(ActionPoints),
-    newUserRepository(User),
-    newOfferRepository(Offer),
+    newActionPointsRepository(),
+    newUserRepository(),
+    newOfferRepository(),
     newValidator(),
   );
   require('./routes/booking')(
     app,
-    newBookingRepository(Booking),
-    newEventBookingRepository(EventBooking, client),
-    newEventRepository(Event),
-    newPlaceUtil(
-      newBookingRepository(Booking),
-      newIntervalRepository(Interval),
-      newPlaceTypeRepository(PlaceType),
-      newPlaceExtraRepository(PlaceExtra)
-    ),
+    newBookingRepository(),
+    newEventBookingRepository(),
+    newEventRepository(),
+    newPlaceUtil(),
   );
   require('./routes/interval')(app);
   require('./routes/place')(app,
-    newPlaceRepository(Place),
-    newPlaceTypeRepository(PlaceType),
-    newPlaceExtraRepository(PlaceExtra),
-    newPlaceTimeFrameRepository(PlaceTimeFrame),
-    newCityRepository(City),
-    newEventRepository(Event),
-    newPlaceUtil(
-      newBookingRepository(Booking),
-      newIntervalRepository(Interval),
-      newPlaceTypeRepository(PlaceType),
-      newPlaceExtraRepository(PlaceExtra)
-    ),
+    newPlaceRepository(),
+    newPlaceTypeRepository(),
+    newPlaceExtraRepository(),
+    newPlaceTimeFrameRepository(),
+    newCityRepository(),
+    newEventRepository(),
+    newPlaceUtil(),
     newValidator(),
   );
   require('./routes/statistics')(app);
@@ -121,76 +150,66 @@ async function bootstrap() {
   require('./routes/campains/userCampaigns')(app);
   require('./routes/campains/campaignsIntervals')(app);
   require('./routes/config')(app);
-  require('./routes/actionPoints')(app, newActionPointsRepository(ActionPoints), newValidator());
-  require('./routes/placeType')(app, newPlaceTypeRepository(PlaceType), newValidator());
+  require('./routes/actionPoints')(app, newActionPointsRepository(), newValidator());
+  require('./routes/placeType')(app, newPlaceTypeRepository(), newValidator());
   require('./routes/placeExtra')(
     app,
-    newPlaceExtraRepository(PlaceExtra),
-    newPlaceTypeRepository(PlaceType),
+    newPlaceExtraRepository(),
+    newPlaceTypeRepository(),
     newValidator(),
   );
   require('./routes/placeTimeFrame')(
     app,
-    newPlaceTimeFrameRepository(PlaceTimeFrame),
-    newPlaceTypeRepository(PlaceType),
+    newPlaceTimeFrameRepository(),
+    newPlaceTypeRepository(),
     newValidator(),
   );
   require('./routes/city')(
     app,
-    newCityRepository(City),
+    newCityRepository(),
     newValidator(),
   );
   require('./routes/driver')(
     app,
-    newDriverRepository(Driver),
-    newRideRepository(Ride, client, newDriverRideRepository(DriverRide)),
+    newDriverRepository(),
+    newRideRepository(),
     newValidator(),
   );
   require('./routes/event')(
     app,
-    newEventRepository(Event),
-    newPlaceRepository(Place),
+    newEventRepository(),
+    newPlaceRepository(),
+    newRequirementRepository(),
     newValidator(),
   );
   require('./routes/driverRide')(
     app,
-    newDriverRideRepository(DriverRide, newRideRepository(Ride, client, newDriverRideRepository(DriverRide))),
-    newDriverRepository(Driver),
+    newDriverRideRepository(),
+    newDriverRepository(),
     newValidator(),
   );
   require('./routes/eventBooking')(
     app,
-    newEventBookingRepository(EventBooking, client),
-    newPlaceRepository(Place),
-    newEventRepository(Event),
-    newBookingRepository(Booking),
-    newRideRepository(Ride, client, newDriverRideRepository(DriverRide)),
-    newBookingUtil(
-      Place,
-      User,
-      Interval,
-      Offer,
-      Booking,
-      newPlaceUtil(
-        newBookingRepository(Booking),
-        newIntervalRepository(Interval),
-        newPlaceTypeRepository(PlaceType),
-        newPlaceExtraRepository(PlaceExtra)
-      ),
-    ),
-    newDeleteRide(
-      newRideRepository(Ride, client, newDriverRideRepository(DriverRide)),
-      newDriverRideRepository(DriverRide, newRideRepository(Ride, client, newDriverRideRepository(DriverRide))),
-      newEventBookingRepository(EventBooking),
-    ),
+    newEventBookingRepository(),
+    newPlaceRepository(),
+    newEventRepository(),
+    newBookingRepository(),
+    newRideRepository(),
+    newBookingUtil(),
+    newDeleteRide(),
     newValidator(),
   );
   require('./routes/ride')(
     app,
-    newRideRepository(Ride, client, newDriverRideRepository(DriverRide)),
-    newDriverRideRepository(DriverRide, newRideRepository(Ride, client, newDriverRideRepository(DriverRide))),
-    newEventBookingRepository(EventBooking, client),
-    newDriverRepository(Driver),
+    newRideRepository(),
+    newDriverRideRepository(),
+    newEventBookingRepository(),
+    newDriverRepository(),
+    newValidator(),
+  );
+  require('./routes/requirement')(
+    app,
+    newRequirementRepository(),
     newValidator(),
   );
 

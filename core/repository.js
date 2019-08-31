@@ -1,22 +1,22 @@
 const { ObjectId } = require('mongodb');
 
-const getObjectId = (id) => {
-  if (!id) {
-    return null;
-  }
-  let oid;
-  try {
-    oid = new ObjectId(id);
-  } catch (e) {
-    return null;
-  }
-  return oid;
-}
-
 class Repository {
   constructor(model, client) {
     this.model = model;
     this.client = client;
+  }
+
+  getObjectId(id) {
+    if (!id) {
+      return null;
+    }
+    let oid;
+    try {
+      oid = new ObjectId(id);
+    } catch (e) {
+      return null;
+    }
+    return oid;
   }
 
   async _addToArray(id, field, value) {

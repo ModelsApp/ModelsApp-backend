@@ -2,15 +2,14 @@ const Joi = require('@hapi/joi');
 
 const timeframe = require('../timeframe');
 const placeOffers = require('./../place/placeOffers');
+const generateRequirements = require('./../postEvent/requirements');
 
-const schema = Joi.object().keys({
+const newSchema = (requirements) => Joi.object().keys({
   eventId: Joi.string().strict().required(),
-  requirements: Joi.object().keys({
-    dressCode: Joi.string().strict().valid(['Elegant', 'Casual']),
-  }),
+  requirements: Joi.object().keys(generateRequirements(requirements)),
   placesOffers: Joi.array().items(placeOffers),
   timeframe,
   placeId: Joi.number().integer().strict(),
 }).min(2);
 
-module.exports = schema;
+module.exports = newSchema;

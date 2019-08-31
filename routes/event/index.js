@@ -2,8 +2,8 @@ const _ = require('lodash');
 const moment = require('moment');
 
 const middleware = require('../../config/authMiddleware');
-const postSchema = require('./schema/postEvent');
-const editSchema = require('./schema/editEvent');
+const newPostSchema = require('./schema/postEvent');
+const newEditSchema = require('./schema/editEvent');
 const addPlaceSchema = require('./schema/place/addPlace');
 const updatePlacesSchema = require('./schema/place/updatePlaces');
 const removePlaceSchema = require('./schema/place/removePlace');
@@ -12,9 +12,10 @@ const validatePlacesOffers = require('./api/place/validatePlacesOffers');
 const validatePlaceOffers = require('./api/place/validatePlaceOffers');
 const ErrorResponse = require('./../../core/errorResponse');
 
-module.exports = (app, eventRepository, placeRepository, validate) => {
+module.exports = (app, eventRepository, placeRepository, requirementRepository, validate) => {
   app.post('/api/event', middleware.isAdmin, async (req, res) => {
-    const validation = validate(req.body, postSchema);
+    const allRequirements = await requirementRepository.getAll();
+    const validation = validate(req.body, newPostSchema(allRequirements));
     if (validation.error) {
       return res.status(400).json({ message: validation.error });
     }
@@ -58,7 +59,8 @@ module.exports = (app, eventRepository, placeRepository, validate) => {
   });
 
   app.put('/api/event', async (req, res) => {
-    const validation = validate(req.body, editSchema);
+    const allRequirements = await requirementRepository.getAll();
+    const validation = validate(req.body, newEditSchema(allRequirements));
     if (validation.error) {
       return res.status(400).json({ message: validation.error });
     }

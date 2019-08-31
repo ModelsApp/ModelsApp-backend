@@ -1,7 +1,7 @@
 const Joi = require('@hapi/joi');
 
 const schema = Joi.object().keys({
-  type: Joi.string().strict().required(),
+  name: Joi.string().strict().required(),
   image: Joi.string().strict().required().allow(''),
 });
 
