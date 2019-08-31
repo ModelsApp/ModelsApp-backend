@@ -108,11 +108,13 @@ class EventRepository extends Repository {
     return this._removeFromArray(id, 'placesOffers', { placeId });
   }
 
-  bookEvent(id, userId) {
+  async bookEvent(id, userId) {
+    await this.model.updateOne({ id }, { $inc: { 'timeframe.freeSpots': -1 } });
     return this._addToArray(id, 'participants', userId);
   }
 
-  unbookEvent(id, userId) {
+  async unbookEvent(id, userId) {
+    await this.model.updateOne({ id }, { $inc: { 'timeframe.freeSpots': 1 } });
     return this._removeFromArray(id, 'participants', userId);
   }
 
