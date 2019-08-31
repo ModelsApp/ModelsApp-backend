@@ -16,8 +16,9 @@ const getObjectId = (id) => {
 }
 
 class EventRepository extends Repository {
-  constructor(model) {
+  constructor(model, requirementRepository) {
     super(model);
+    this.requirementRepository = requirementRepository;
   }
 
   async insertOne ({ placeId, requirements, placesOffers, timeframe }) {
@@ -114,8 +115,22 @@ class EventRepository extends Repository {
   unbookEvent(id, userId) {
     return this._removeFromArray(id, 'participants', userId);
   }
+
+  async joinRequirements(event) {
+    return {
+      ...event,
+      requirements: await Object.entries(event.requirements)
+        .reduce(async (acc, [key, value]) => ({
+          ...(await acc),
+          [key]: {
+            ...(await this.requirementRepository.findOneByName(key)),
+            value,
+          }
+        }), Promise.resolve({})),
+    };
+  }
 }
 
-const newEventRepository = (model) => new EventRepository(model);
+const newEventRepository = (model, requirementRepository) => new EventRepository(model, requirementRepository);
 
 module.exports = newEventRepository;

@@ -36,6 +36,10 @@ class RequirementRepository extends Repository {
   getAll() {
     return this.model.find({}).toArray();
   }
+
+  findOneByName(name) {
+    return this.model.findOne({ name });
+  }
 }
 
 const newRequirementRepository = (model, client) => new RequirementRepository(model, client);

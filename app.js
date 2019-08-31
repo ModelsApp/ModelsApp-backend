@@ -68,12 +68,13 @@ async function bootstrap() {
     });
   });
 
+  const newRequirementRepository = () => requirementRepository(Requirement);
   const newEventBookingRepository = () => eventBookingRepository(EventBooking, client);
   const newActionPointsRepository = () => actionPointsRepository(ActionPoints);
   const newUserRepository = () => userRepository(User);
   const newOfferRepository = () => offerRepository(Offer);
   const newBookingRepository = () => bookingRepository(Booking);
-  const newEventRepository = () => eventRepository(Event);
+  const newEventRepository = () => eventRepository(Event, newRequirementRepository());
   const newIntervalRepository = () => intervalRepository(Interval);
   const newPlaceTypeRepository = () => placeTypeRepository(PlaceType);
   const newPlaceExtraRepository = () => placeExtraRepository(PlaceExtra);
@@ -83,7 +84,6 @@ async function bootstrap() {
   const newRideRepository = () => rideRepository(Ride, client, newDriverRideRepository());
   const newDriverRepository = () => driverRepository(Driver);
   const newDriverRideRepository = () => driverRideRepository(DriverRide, rideRepository(Ride));
-  const newRequirementRepository = () => requirementRepository(Requirement);
 
   const newPlaceUtil = () => placeUtil(
     newBookingRepository(),

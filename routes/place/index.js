@@ -314,7 +314,8 @@ module.exports = (
     place.bookings = books;
     place.offers = offers;
     const icons = await placeUtil.getPlaceIcons(place);
-    const event = await eventRepository.findActivePlaceEvent(place._id);
+    let event = await eventRepository.findActivePlaceEvent(place._id);
+    event = await eventRepository.joinRequirements(event);
 
     return res.status(200).json({ ...place, icons, event });
   });
