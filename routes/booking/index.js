@@ -303,7 +303,8 @@ module.exports = (app, bookingRepository, eventBookingRepository, eventRepositor
       const id = parseInt(req.params.id);
       const offer = parseInt(req.body.offerID);
   
-      await bookingUtil.addOfferToBooking(id, offer);
+      const book = await bookingUtil.addOfferToBooking(id, offer);
+      return res.status(200).json({ message: 'Added', data: book });
     } catch (error) {
       next(error);
     }

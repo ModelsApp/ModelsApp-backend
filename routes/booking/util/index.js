@@ -360,7 +360,7 @@ class BookingUtil {
     if (!book.value) {
       throw new Error('No such booking');
     }
-    return book;
+    return book.value;
   }
 }
 
