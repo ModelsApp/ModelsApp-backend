@@ -32,6 +32,7 @@ module.exports = (
   placeExtraRepository,
   placeTimeFramesRepository,
   cityRepository,
+  eventRepository,
   placeUtil,
   validate,
 ) => {
@@ -313,7 +314,9 @@ module.exports = (
     place.bookings = books;
     place.offers = offers;
     const icons = await placeUtil.getPlaceIcons(place);
-    res.status(200).json({ ...place, icons });
+    const event = await eventRepository.findActivePlaceEvent(place._id);
+
+    return res.status(200).json({ ...place, icons, event });
   });
 
   app.post('/api/place/:id/notificationRecivers', async (req, res) => {

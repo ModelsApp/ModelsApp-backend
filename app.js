@@ -104,6 +104,7 @@ async function bootstrap() {
     newPlaceExtraRepository(PlaceExtra),
     newPlaceTimeFrameRepository(PlaceTimeFrame),
     newCityRepository(City),
+    newEventRepository(Event),
     newPlaceUtil(
       newBookingRepository(Booking),
       newIntervalRepository(Interval),

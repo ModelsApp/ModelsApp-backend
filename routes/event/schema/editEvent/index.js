@@ -10,6 +10,7 @@ const schema = Joi.object().keys({
   }),
   placesOffers: Joi.array().items(placeOffers),
   timeframe,
+  placeId: Joi.number().integer().strict(),
 }).min(2);
 
 module.exports = schema;

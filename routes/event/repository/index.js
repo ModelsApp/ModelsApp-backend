@@ -38,7 +38,7 @@ class EventRepository extends Repository {
     return result.ops[0];
   }
 
-  async updateOne(id, { requirements, placesOffers, timeframe }) {
+  async updateOne(id, { requirements, placesOffers, timeframe, placeId }) {
     const oid = getObjectId(id);
     const result = await this.model.findOneAndUpdate(
       {
@@ -49,6 +49,7 @@ class EventRepository extends Repository {
           ...(requirements && { requirements }),
           ...(timeframe && { timeframe }),
           ...(placesOffers && { placesOffers }),
+          ...(placeId && { placeId }),
         }
       },
       {
@@ -57,6 +58,11 @@ class EventRepository extends Repository {
       },
     );
     return result.value;
+  }
+
+  findActivePlaceEvent(placeId) {
+    const now = moment().utc().toISOString();
+    return this.model.findOne({ placeId, 'timeframe.end': { $gte: now } });
   }
 
   findWhere({ id }) {

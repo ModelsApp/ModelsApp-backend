@@ -74,20 +74,15 @@ module.exports = (app, eventBookingRepository, placeRepository, eventRepository,
         })),
       };
 
-
-
+      const oneWayRide = eventBooking.rides.find((ride) => !ride.fromPlace && !ride.toPlace);
       const transferRides = eventBooking.rides.filter((ride) => ride.fromPlace && ride.toPlace);
-      if (transferRides.length) {
-        eventBooking = {
-          ...eventBooking,
-          transferRides,
-        };
-      }
-
       const returnRide = eventBooking.rides.find((ride) => ride.fromPlace && !ride.toPlace);
+
       eventBooking = {
         ...eventBooking,
-        returnRide,
+        ...(oneWayRide && { oneWayRide }),
+        ...(returnRide && { returnRide }),
+        ...(transferRides.length && { transferRides }),
       };
   
       return res.status(200).json(_.omit(eventBooking, 'rides'));
