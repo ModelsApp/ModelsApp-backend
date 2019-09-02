@@ -20,7 +20,7 @@ class Repository {
   }
 
   async _addToArray(id, field, value) {
-    const oid = getObjectId(id);
+    const oid = this.getObjectId(id);
     if (!oid) {
       throw new Error('Provide correct id!');
     }
@@ -29,7 +29,7 @@ class Repository {
   }
 
   async _removeFromArray(id, field, value) {
-    const oid = getObjectId(id);
+    const oid = this.getObjectId(id);
     if (!oid) {
       throw new Error('Provide correct id!');
     }
@@ -48,11 +48,11 @@ class Repository {
   }
 
   async _setField(id, field, value) {
-    const oid = getObjectId(id);
+    const oid = this.getObjectId(id);
     if (!oid) {
       throw new Error('Provide correct id!');
     }
-    let v = getObjectId(value);
+    let v = this.getObjectId(value);
     if (!v) {
       v = value;
     }

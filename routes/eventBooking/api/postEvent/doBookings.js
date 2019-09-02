@@ -15,7 +15,7 @@ const doBookings = async (event, userId, bookings, bookingUtil) => {
     if (moment(booking.date).isAfter(moment(event.timeframe.end))) {
       throw ErrorResponse.BadRequest(`Booking cannot happen after event finished`);
     }
-    const details = await bookingUtil.bookPossible(booking.placeId, userId, booking.intervalId, moment(booking.date));
+    const details = await bookingUtil.bookPossible(booking.placeId, userId, booking.intervalId, moment(booking.date), true);
     bookingDetails.push({ booking, ...details });
   }
 

@@ -36,15 +36,15 @@ class BookingUtil {
     return intervals;
   }
 
-  async bookPossible(id, userID, intervalId, date) {
+  async bookPossible(id, userID, intervalId, date, omitLimits = false) {
     if(!id || !userID || !intervalId || !date.isValid()){
-      throw ErrorResponse.BadRequest('invalid parameters');
+      throw ErrorResponse.BadRequest('Invalid parameters');
     }
     const dayWeek = date.format('dddd');
     const place = await this.Place.findOne({ _id : id });
     const user = await this.User.findOne({_id : userID });
     let offers = await this.Offer.find({place: id}).toArray();
-    if (!this.placeAllowsUserGender(place, user)) {
+    if (!omitLimits && !this.placeAllowsUserGender(place, user)) {
       throw ErrorResponse.Unauthorized(`Venue does not accept user's gender`);
     }
     offers = this.generateOfferPrices(offers, user.level);
@@ -52,16 +52,16 @@ class BookingUtil {
     const intervals = await this.getPlaceIntervals(id)
     const chosenInterval = intervals.find(x => x._id == intervalId);
 
-    if (!place || !user || !interval || !chosenInterval) {
-      throw ErrorResponse.BadRequest('invalid interval');
+    if (!place || !user || !intervalId || !chosenInterval) {
+      throw ErrorResponse.BadRequest('Invalid interval');
     }
 
     if (!chosenInterval.day || chosenInterval.day !== dayWeek) {
-      throw ErrorResponse.BadRequest('chosen date does not match interval');
+      throw ErrorResponse.BadRequest('Chosen date does not match interval');
     }
 
     if (!moment(`${date.format('YYYY-MM-DD')} ${chosenInterval.start.replace('.',':')}`).isValid()){
-      throw ErrorResponse.BadRequest('invalid date');
+      throw ErrorResponse.BadRequest('Invalid date');
     }
 
     let fullDate = moment(`${date.format('YYYY-MM-DD')} ${chosenInterval.start.replace('.',':')}`);
@@ -71,8 +71,12 @@ class BookingUtil {
     }
 
     let userValidation = await this.validateUserPossibility(fullDate, user, offers, place);
-    if (!userValidation.isValid) {
-      throw ErrorResponse.BadRequest(userValidation.error);
+    const minOfferPrice =  Math.min(...offers.map(x => x.price)) / 2;
+    if (!(minOfferPrice <= user.credits)){
+      throw ErrorResponse.Unauthorized('Not enough credits');
+    }
+    if (!omitLimits && !userValidation.isValid) {
+      throw ErrorResponse.BadRequest(userValidation.error);  
     }
 
     let validateInterval = await this.validateIntervalSlots(chosenInterval, fullDate, place);
@@ -81,11 +85,11 @@ class BookingUtil {
       throw ErrorResponse.Unauthorized('not enough slots');
     }
 
-    if (await this.userBookingsLimitReached(user, place)) {
+    if (!omitLimits && await this.userBookingsLimitReached(user, place)) {
       throw ErrorResponse.Unauthorized('User has exceeded his bookings limit');
     }
 
-    if (!(await this.userCanBook(user, place))) {
+    if (!omitLimits && !(await this.userCanBook(user, place))) {
       throw ErrorResponse.Unauthorized(`User's subscription plan is insufficient for this venue`);
     }
 
@@ -253,6 +257,7 @@ class BookingUtil {
         $gte: startMonth,
         $lt: endMonth,
       },
+      eventBooking: false,
     }).toArray();
 
     const numBookings = recentUserBookings.length;

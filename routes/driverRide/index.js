@@ -24,7 +24,7 @@ module.exports = (app, driverRideRepository, driverRepository, validate) => {
     return res.status(201).send(result);
   });
 
-  app.get('/api/driver-ride', middleware.isAuthorized, async (req, res, next) => {
+  app.get('/api/driver-ride', middleware.isDriverCaptain, async (req, res, next) => {
     try {
       const { id, groupBy } = req.query;
       const query = {
