@@ -1,9 +1,12 @@
 const doBookings = require('./doBookings');
 const validateEventBooking = require('./validateEventBooking');
+const calculateCredits = require('./../../../actionPoints/calculator/action');
+const ErrorResponse = require('./../../../../core/errorResponse');
 
 const newPostEventBooking = (
   eventBookingRepository, 
   eventRepository,
+  userRepository,
   bookingUtil,
 ) => async (eventId, bookings, user) => {
 
@@ -13,6 +16,7 @@ const newPostEventBooking = (
   let eventBooking;
   await eventBookingRepository.transaction(
     async () => {
+      await userRepository.subtractCredits(user, calculateCredits(event.baseCredits, user.level, event.level));
       const bookingIds = await doBookings(event, user._id, bookings, bookingUtil);
       await eventRepository.bookEvent(eventId, user._id);
       eventBooking = await eventBookingRepository

@@ -196,6 +196,7 @@ async function bootstrap() {
     newEventRepository(),
     newBookingRepository(),
     newRideRepository(),
+    newUserRepository(),
     newBookingUtil(),
     newDeleteRide(),
     newValidator(),

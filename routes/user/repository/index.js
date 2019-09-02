@@ -1,5 +1,6 @@
 
 const Repository = require('./../../../core/repository');
+const ErrorResponse = require('./../../../core/errorResponse');
 
 class UserRepository extends Repository {
   constructor(model) {
@@ -34,6 +35,25 @@ class UserRepository extends Repository {
       });
 
     return updatedUser.value;
+  }
+
+  subtractCredits (user, credits) {
+    if (!(user.credits >= credits)) {
+      throw ErrorResponse.Unauthorized('Not enough credits');
+    }
+    let toPay = credits;
+    if (toPay > 0) {
+      toPay = -toPay;
+    }
+    return this.model.updateOne({ _id: user._id }, { $inc: { credits: toPay }});
+  }
+
+  addCredits (user, credits) {
+    let toPay = credits;
+    if (toPay < 0) {
+      toPay = -toPay;
+    }
+    return this.model.updateOne({ _id: user._id }, { $inc: { credits: toPay }});
   }
 }
 

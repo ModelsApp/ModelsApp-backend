@@ -9,6 +9,8 @@ const newSchema = (requirements, intervalIds) => Joi.object().keys({
   requirements: Joi.object().keys(generateRequirements(requirements)).required(),
   placesOffers: Joi.array().items(newPlaceOffers(intervalIds)).required(),
   timeframe,
+  baseCredits: Joi.number().integer().strict().required(),
+  level: Joi.number().integer().strict(),
 });
 
 module.exports = newSchema;

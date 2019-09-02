@@ -21,11 +21,16 @@ module.exports = (app, eventRepository, placeRepository, requirementRepository, 
       return res.status(400).json({ message: validation.error });
     }
 
-    const { placeId, requirements, placesOffers, timeframe } = req.body;
+    const { placeId, requirements, placesOffers, timeframe, baseCredits, level } = req.body;
 
     const place = await placeRepository.findOne(placeId);
     if (!place) {
       return res.status(404).json({ message: 'No such place' });
+    }
+
+    let levelToSet = level;
+    if (!levelToSet) {
+      levelToSet = place.level;
     }
 
     try {
@@ -39,6 +44,8 @@ module.exports = (app, eventRepository, placeRepository, requirementRepository, 
       requirements,
       placesOffers,
       timeframe,
+      baseCredits,
+      level: levelToSet || 1,
     });
 
     return res.status(201).json(event);

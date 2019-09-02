@@ -1,13 +1,16 @@
 const moment = require('moment');
+const calculateCredits = require('./../../../actionPoints/calculator/action');
+const ErrorResponse = require('./../../../../core/errorResponse');
 
 const newDeleteEventBooking = (
   eventBookingRepository, 
   eventRepository,
+  userRepository,
   bookingUtil,
   deleteRide,
-) => async (id, userId) => {
-  let eventBooking = await eventBookingRepository.findWhere({ id, userId });
-  if (!eventBooking) {
+) => async (id, user) => {
+  let eventBooking = await eventBookingRepository.findWhere({ id, userId: user._id });
+  if (!eventBooking.length) {
     throw ErrorResponse.NotFound();
   }
   eventBooking = eventBooking[0];
@@ -22,7 +25,7 @@ const newDeleteEventBooking = (
     throw ErrorResponse.Unauthorized(`Couldn't unbook event as it starts in less than 2 hours`);
   }
   await eventBookingRepository.transaction(async () => {
-    await eventRepository.unbookEvent(eventBooking.eventId, userId);
+    await eventRepository.unbookEvent(eventBooking.eventId, user._id);
 
     for (const bookingId of eventBooking.bookings) {
       await bookingUtil.unbook(bookingId);
@@ -33,6 +36,7 @@ const newDeleteEventBooking = (
     }
 
     await eventBookingRepository.deleteOne(id);
+    await userRepository.addCredits(user, calculateCredits(event.baseCredits, user.level, event.level));
   });
 };
 

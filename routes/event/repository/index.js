@@ -21,7 +21,7 @@ class EventRepository extends Repository {
     this.requirementRepository = requirementRepository;
   }
 
-  async insertOne ({ placeId, requirements, placesOffers, timeframe }) {
+  async insertOne ({ placeId, requirements, placesOffers, timeframe, baseCredits, level }) {
     if (timeframe) {
       timeframe.start = moment(timeframe.start).toISOString();
       timeframe.end = moment(timeframe.end).toISOString();
@@ -33,6 +33,8 @@ class EventRepository extends Repository {
       placesOffers,
       timeframe,
       participants: [],
+      baseCredits,
+      level,
       createdAt: moment().utc().toISOString(),
     });
 

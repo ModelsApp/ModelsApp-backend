@@ -10,6 +10,8 @@ const newSchema = (requirements) => Joi.object().keys({
   placesOffers: Joi.array().items(placeOffers),
   timeframe,
   placeId: Joi.number().integer().strict(),
+  baseCredits: Joi.number().integer().strict(),
+  level: Joi.number().integer().strict(),
 }).min(2);
 
 module.exports = newSchema;

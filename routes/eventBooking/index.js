@@ -11,7 +11,18 @@ const newPostEventBooking = require('./api/postEvent');
 const newPutEventBooking = require('./api/putEvent');
 const newDeleteEventBooking = require('./api/deleteEvent');
 
-module.exports = (app, eventBookingRepository, placeRepository, eventRepository, bookingRepository, rideRepository, bookingUtil, deleteRide, validate) => {
+module.exports = (
+  app,
+  eventBookingRepository,
+  placeRepository,
+  eventRepository,
+  bookingRepository,
+  rideRepository,
+  userRepository,
+  bookingUtil,
+  deleteRide,
+  validate,
+) => {
   app.post('/api/event-booking', middleware.isAuthorized, async (req, res, next) => {
     try {
       const user = await req.user;
@@ -29,6 +40,7 @@ module.exports = (app, eventBookingRepository, placeRepository, eventRepository,
       const { status, message } = await newPostEventBooking(
         eventBookingRepository,
         eventRepository,
+        userRepository,
         bookingUtil,
       )(eventId, bookings, user);
 
@@ -134,9 +146,10 @@ module.exports = (app, eventBookingRepository, placeRepository, eventRepository,
       await newDeleteEventBooking(
         eventBookingRepository,
         eventRepository,
+        userRepository,
         bookingUtil,
         deleteRide,
-      )(id, user._id);
+      )(id, user);
   
       return res.status(200).json({ message: 'Event unbooked' });
     } catch (error) {
