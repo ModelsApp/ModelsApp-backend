@@ -69,6 +69,7 @@ async function bootstrap() {
   });
 
   const newRequirementRepository = () => requirementRepository(Requirement);
+  const newPlaceRepository = () => placeRepository(Place, newRequirementRepository());
   const newEventBookingRepository = () => eventBookingRepository(EventBooking, client);
   const newActionPointsRepository = () => actionPointsRepository(ActionPoints);
   const newUserRepository = () => userRepository(User);
@@ -78,7 +79,6 @@ async function bootstrap() {
   const newIntervalRepository = () => intervalRepository(Interval);
   const newPlaceTypeRepository = () => placeTypeRepository(PlaceType);
   const newPlaceExtraRepository = () => placeExtraRepository(PlaceExtra);
-  const newPlaceRepository = () => placeRepository(Place, newRequirementRepository());
   const newPlaceTimeFrameRepository = () => placeTimeFrameRepository(PlaceTimeFrame);
   const newCityRepository = () => cityRepository(City);
   const newRideRepository = () => rideRepository(Ride, client, newDriverRideRepository());

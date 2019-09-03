@@ -125,7 +125,14 @@ module.exports = (app, bookingRepository, eventBookingRepository, eventRepositor
       result.regular = regularBookings;
 
       let eventBookings = await eventBookingRepository.findAllForUser(user._id);
-      eventBookings = await Promise.all(eventBookings.map(async (eb) => ({ ...eb, event: await eventRepository.findById(eb.eventId) })));
+      eventBookings = await Promise.all(eventBookings.map(async (eb) => ({
+        ...eb,
+        event: await eventRepository.findById(eb.eventId),
+      })));
+      eventBookings = await Promise.all(eventBookings.map(async (eb) => ({
+        ...eb,
+        event: await eventRepository.joinPlace(eb.event),
+      })));
       result.event = eventBookings;
       return res.status(200).json(result);
     } catch (error) {

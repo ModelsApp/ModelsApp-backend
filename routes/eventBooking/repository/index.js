@@ -126,6 +126,9 @@ class EventBookingRepository extends Repository {
   }
 }
 
-const newEventBookingRepository = (model, client) => new EventBookingRepository(model, client);
+const newEventBookingRepository = (
+  model,
+  client,
+) => new EventBookingRepository(model, client);
 
 module.exports = newEventBookingRepository;
