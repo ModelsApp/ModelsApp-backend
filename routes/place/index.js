@@ -33,6 +33,7 @@ module.exports = (
   placeTimeFramesRepository,
   cityRepository,
   eventRepository,
+  requirementRepository,
   placeUtil,
   validate,
 ) => {
@@ -49,6 +50,12 @@ module.exports = (
         res.status(404).json({message : "invalid parameters"});
       }
   });
+
+  /* migrate requirements field */
+  app.get('/api/place/migrate', async (req, res) => {
+    await Place.updateMany({ }, { $set: { requirements: {} } });
+    res.send('ok');
+  });  
 
   /* migrate places allows field */
   /*
@@ -122,7 +129,8 @@ module.exports = (
       .map(placeExtra => placeExtra.name);
     const validCities = (await cityRepository.find({}, { projection: { name: 1 } }))
       .map(city => city.name);
-    const validation = validate(req.body, newPostPlaceSchema(validTypes, validExtras, validCities));
+    const allRequirements = await requirementRepository.getAll();
+    const validation = validate(req.body, newPostPlaceSchema(validTypes, validExtras, validCities, allRequirements));
     if (validation.error) {
       return res.status(400).json({ message: validation.error });
     }
@@ -175,6 +183,7 @@ module.exports = (
       bookingLimits: req.body.bookingLimits || {},
       bookingLimitsPeriod: req.body.bookingLimitsPeriod || BOOKING_LIMIT_PERIODS.week,
       city: req.body.city,
+      requirements: req.body.requirements,
     };
 
     const seq = await Counter.findOneAndUpdate(
@@ -205,7 +214,8 @@ module.exports = (
       .map(placeExtra => placeExtra.name);
     const validCities = (await cityRepository.find({}, { projection: { name: 1 } }))
       .map(city => city.name);
-    const validation = validate(newPlace, newEditPlaceSchema(validTypes, validExtras, validCities));
+    const allRequirements = await requirementRepository.getAll();
+    const validation = validate(newPlace, newEditPlaceSchema(validTypes, validExtras, validCities, allRequirements));
     if (validation.error) {
       return res.status(400).json({ message: validation.error });
     }
@@ -267,6 +277,7 @@ module.exports = (
           if (newPlace.bookingLimits) place.bookingLimits = newPlace.bookingLimits;
           if (newPlace.bookingLimitsPeriod) place.bookingLimitsPeriod = newPlace.bookingLimitsPeriod;
           if (newPlace.city) place.city = newPlace.city;
+          if (newPlace.requirements) place.requirements = newPlace.requirements;
 
           Place.replaceOne({_id: id }, place, function () {
             res.json({ message: "Place updated" });

@@ -3,11 +3,12 @@ const Joi = require('@hapi/joi');
 const { ACCESS } = require('./../../constant');
 const { GENDERS } = require('./../../../user/constant');
 const { BOOKING_LIMIT_PERIODS } = require('./../../constant');
+const generateRequirements = require('./../../../event/schema/postEvent/requirements');
 
 const daySchedule = Joi.string().strict();
 const dayTimeFrame = Joi.array().items(Joi.string());
 
-const newSchema = (validTypes, validExtras, validCities) => Joi.object().keys({
+const newSchema = (validTypes, validExtras, validCities, requirements) => Joi.object().keys({
   isActive: Joi.boolean().strict(),
   phone: Joi.string().strict(),
   instapage: Joi.string().strict(),
@@ -53,6 +54,7 @@ const newSchema = (validTypes, validExtras, validCities) => Joi.object().keys({
   bookingLimits: Joi.object().pattern(/^\d+$/, Joi.number().integer().strict()),
   bookingLimitsPeriod: Joi.string().strict().valid(Object.values(BOOKING_LIMIT_PERIODS)),
   city: Joi.string().strict().valid(validCities),
+  requirements: Joi.object().keys(generateRequirements(requirements)).required(),
 });
 
 module.exports = newSchema;

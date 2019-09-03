@@ -139,6 +139,7 @@ async function bootstrap() {
     newPlaceTimeFrameRepository(),
     newCityRepository(),
     newEventRepository(),
+    newRequirementRepository(),
     newPlaceUtil(),
     newValidator(),
   );
