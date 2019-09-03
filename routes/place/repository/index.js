@@ -3,6 +3,10 @@ const newPlaceRepository = (model, requirementRepository) => ({
     return model.findOne({ _id: id });
   },
 
+  findById: (id) => {
+    return model.findOne({ _id: id });
+  },
+
   findAllWhere: (query) => {
     return model.find(query).toArray();
   },

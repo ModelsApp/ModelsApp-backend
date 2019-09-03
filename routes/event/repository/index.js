@@ -16,9 +16,10 @@ const getObjectId = (id) => {
 }
 
 class EventRepository extends Repository {
-  constructor(model, requirementRepository) {
+  constructor(model, requirementRepository, placeRepository) {
     super(model);
     this.requirementRepository = requirementRepository;
+    this.placeRepository = placeRepository;
   }
 
   async insertOne ({ placeId, requirements, placesOffers, timeframe, baseCredits, level }) {
@@ -133,8 +134,19 @@ class EventRepository extends Repository {
         }), Promise.resolve({})),
     };
   }
+
+  async joinPlace(event) {
+    return {
+      ...event,
+      place: await this.placeRepository.findById(event.placeId),
+    }
+  }
 }
 
-const newEventRepository = (model, requirementRepository) => new EventRepository(model, requirementRepository);
+const newEventRepository = (
+  model,
+  requirementRepository,
+  placeRepository,
+) => new EventRepository(model, requirementRepository, placeRepository);
 
 module.exports = newEventRepository;

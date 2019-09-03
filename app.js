@@ -74,7 +74,7 @@ async function bootstrap() {
   const newUserRepository = () => userRepository(User);
   const newOfferRepository = () => offerRepository(Offer);
   const newBookingRepository = () => bookingRepository(Booking);
-  const newEventRepository = () => eventRepository(Event, newRequirementRepository());
+  const newEventRepository = () => eventRepository(Event, newRequirementRepository(), newPlaceRepository());
   const newIntervalRepository = () => intervalRepository(Interval);
   const newPlaceTypeRepository = () => placeTypeRepository(PlaceType);
   const newPlaceExtraRepository = () => placeExtraRepository(PlaceExtra);

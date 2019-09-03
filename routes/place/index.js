@@ -327,6 +327,7 @@ module.exports = (
     const icons = await placeUtil.getPlaceIcons(place);
     let event = await eventRepository.findActivePlaceEvent(place._id);
     event = await eventRepository.joinRequirements(event);
+    event = await eventRepository.joinPlace(event);
     place = await placeRepository.joinRequirements(place);
 
     return res.status(200).json({ ...place, icons, event });
