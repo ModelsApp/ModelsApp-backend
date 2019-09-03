@@ -76,6 +76,14 @@ class DriverRideRepository extends Repository {
     return result.value;
   }
 
+  findForDriver(driverId) {
+    return this.model.find(
+        {
+          drivers: String(driverId),
+        },
+      ).toArray();    
+  }
+
   findWhere({ id }) {
     const oid = getObjectId(id);
     return this.model.find(

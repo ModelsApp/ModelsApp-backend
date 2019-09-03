@@ -86,7 +86,7 @@ module.exports = (
         })),
       };
 
-      const oneWayRide = eventBooking.rides.find((ride) => !ride.fromPlace && !ride.toPlace);
+      const oneWayRide = eventBooking.rides.find((ride) => !ride.fromPlace && ride.toPlace);
       const transferRides = eventBooking.rides.filter((ride) => ride.fromPlace && ride.toPlace);
       const returnRide = eventBooking.rides.find((ride) => ride.fromPlace && !ride.toPlace);
 

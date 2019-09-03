@@ -26,7 +26,7 @@ module.exports = (app, driverRideRepository, driverRepository, validate) => {
 
   app.get('/api/driver-ride', middleware.isDriverCaptain, async (req, res, next) => {
     try {
-      const { id, groupBy } = req.query;
+      const { id, groupBy, filter } = req.query;
       const query = {
         ...(id && { id }),
       };
@@ -41,7 +41,7 @@ module.exports = (app, driverRideRepository, driverRepository, validate) => {
         }
         case 'driver': {
           result = await driverRepository.find({});
-          result = await Promise.all(result.map(async (driver) => {
+          result = await Promise.all(result.map(async (driver) => { 
             const driverRides = await driverRideRepository.findByDriverId(driver._id);
             const driverRidesJoined = await driverRideRepository.joinRides(driverRides);
 
@@ -53,9 +53,37 @@ module.exports = (app, driverRideRepository, driverRepository, validate) => {
           result = await driverRideRepository.findWhere(query);
         }
       }
-    
   
-      return res.status(200).send(result);
+      return res.status(200).json(result);
+    } catch (error) {
+      return next(error);
+    }
+  });
+
+  app.get('/api/driver-ride/my-pickups', middleware.isDriver, async (req, res, next) => {
+    try {
+      const user = await req.user;
+      const { filter } = req.query;
+
+      let driverRides = await driverRideRepository.findForDriver(user.driver);
+      driverRides = await driverRideRepository.joinRides(driverRides);
+
+      if (filter === 'oneWay') {
+        driverRides = driverRides
+          .map(driverRide => ({
+            ...driverRide,
+            rides: driverRide.rides.filter(ride => !ride.fromPlace && ride.toPlace),
+          }));
+      }
+      if (filter === 'return') {
+        driverRides = driverRides
+          .map(driverRide => ({
+            ...driverRide,
+            rides: driverRide.rides.filter(ride => ride.fromPlace && !ride.toPlace),
+          }));
+      }
+  
+      return res.status(200).json(driverRides);
     } catch (error) {
       return next(error);
     }

@@ -10,8 +10,8 @@ const schema = Joi.object().keys({
   driverRideId: Joi.string().strict(),
   from: locationSchema,
   to: locationSchema,
-  fromPlace: Joi.number().integer().strict(),
-  toPlace: Joi.number().integer().strict(),
+  fromPlace: Joi.number().integer().strict().allow(null),
+  toPlace: Joi.number().integer().strict().allow(null),
 }).min(2);
 
 module.exports = schema;
