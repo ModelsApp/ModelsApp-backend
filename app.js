@@ -78,7 +78,7 @@ async function bootstrap() {
   const newIntervalRepository = () => intervalRepository(Interval);
   const newPlaceTypeRepository = () => placeTypeRepository(PlaceType);
   const newPlaceExtraRepository = () => placeExtraRepository(PlaceExtra);
-  const newPlaceRepository = () => placeRepository(Place);
+  const newPlaceRepository = () => placeRepository(Place, newRequirementRepository());
   const newPlaceTimeFrameRepository = () => placeTimeFrameRepository(PlaceTimeFrame);
   const newCityRepository = () => cityRepository(City);
   const newRideRepository = () => rideRepository(Ride, client, newDriverRideRepository());

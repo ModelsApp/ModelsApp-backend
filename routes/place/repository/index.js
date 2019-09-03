@@ -1,4 +1,4 @@
-const newPlaceRepository = (model) => ({
+const newPlaceRepository = (model, requirementRepository) => ({
   findOne: (id) => {
     return model.findOne({ _id: id });
   },
@@ -23,6 +23,20 @@ const newPlaceRepository = (model) => ({
 
   findManyByIds: (ids) => {
     return model.find({ _id: { $in: ids } }).toArray();
+  },
+
+  joinRequirements: async (place) => {
+    return {
+      ...place,
+      requirements: await Object.entries(place.requirements)
+        .reduce(async (acc, [key, value]) => ({
+          ...(await acc),
+          [key]: {
+            ...(await requirementRepository.findOneByName(key)),
+            value,
+          }
+        }), Promise.resolve({})),
+    };
   }
 });
 
