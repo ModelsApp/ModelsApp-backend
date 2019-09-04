@@ -32,14 +32,11 @@ const newPlaceRepository = (model, requirementRepository) => ({
   joinRequirements: async (place) => {
     return {
       ...place,
-      requirements: await Object.entries(place.requirements)
-        .reduce(async (acc, [key, value]) => ({
-          ...(await acc),
-          [key]: {
+      requirements: await Promise.all(Object.entries(place.requirements)
+        .map(async ([key, value]) => ({
             ...(await requirementRepository.findOneByName(key)),
             value,
-          }
-        }), Promise.resolve({})),
+        }))),
     };
   }
 });
