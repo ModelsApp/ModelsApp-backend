@@ -70,11 +70,11 @@ async function bootstrap() {
 
   const newRequirementRepository = () => requirementRepository(Requirement);
   const newPlaceRepository = () => placeRepository(Place, newRequirementRepository());
-  const newEventBookingRepository = () => eventBookingRepository(EventBooking, client);
+  const newEventBookingRepository = () => eventBookingRepository(EventBooking, client, newEventRepository());
   const newActionPointsRepository = () => actionPointsRepository(ActionPoints);
   const newUserRepository = () => userRepository(User);
   const newOfferRepository = () => offerRepository(Offer);
-  const newBookingRepository = () => bookingRepository(Booking);
+  const newBookingRepository = () => bookingRepository(Booking, newPlaceRepository());
   const newEventRepository = () => eventRepository(Event, newRequirementRepository(), newPlaceRepository());
   const newIntervalRepository = () => intervalRepository(Interval);
   const newPlaceTypeRepository = () => placeTypeRepository(PlaceType);

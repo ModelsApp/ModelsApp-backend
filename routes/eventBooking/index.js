@@ -96,6 +96,14 @@ module.exports = (
         ...(returnRide && { returnRide }),
         ...(transferRides.length && { transferRides }),
       };
+      eventBooking = await eventBookingRepository.joinEvent(eventBooking);
+      eventBooking = {
+        ...eventBooking,
+        event: await eventRepository.joinPlace(eventBooking.event),
+        bookings: await Promise.all(
+          eventBooking.bookings.map(
+            async (booking) => await bookingRepository.joinPlace(booking))),
+      };
   
       return res.status(200).json(_.omit(eventBooking, 'rides'));
     } catch (error) {

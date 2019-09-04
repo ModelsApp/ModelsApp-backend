@@ -16,8 +16,9 @@ const getObjectId = (id) => {
 }
 
 class EventBookingRepository extends Repository {
-  constructor(model, client) {
+  constructor(model, client, eventRepository) {
     super(model, client);
+    this.eventRepository = eventRepository;
   }
 
   async insertOne ({ eventId, userId, bookings }) {
@@ -124,11 +125,19 @@ class EventBookingRepository extends Repository {
   findAllForUser(userId) {
     return this.model.find({ userId }).toArray();
   }
+
+  async joinEvent(eventBooking) {
+    return {
+      ...eventBooking,
+      event: await this.eventRepository.findById(eventBooking.eventId),
+    }
+  }
 }
 
 const newEventBookingRepository = (
   model,
   client,
-) => new EventBookingRepository(model, client);
+  eventRepository,
+) => new EventBookingRepository(model, client, eventRepository);
 
 module.exports = newEventBookingRepository;

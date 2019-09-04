@@ -1,4 +1,4 @@
-const newBookingRepository = (model) => ({
+const newBookingRepository = (model, placeRepository) => ({
   findManyByIds: (ids) => {
     return model.find({ _id: { $in: ids } }).toArray();
   },
@@ -17,7 +17,14 @@ const newBookingRepository = (model) => ({
 
   findAllRegularBookingsForUser: (userId) => {
     return model.find({ user: userId }, { eventBooking: false }).toArray();
-  }
+  },
+
+  joinPlace: async (booking) => {
+    return {
+      ...booking,
+      place: await placeRepository.findById(booking.place),
+    }
+  },
 });
 
 module.exports = newBookingRepository;
