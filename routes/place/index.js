@@ -8,7 +8,10 @@ const imageUplader = require('../../lib/imageUplader');
 const entityHelper = require('../../lib/entityHelper');
 const newPostPlaceSchema = require('./schema/postPlace');
 const newEditPlaceSchema = require('./schema/editPlace');
+const deleteNotificationReceiverSchema = require('./schema/deleteNotificationReceiver');
 const newPostNotificationSchema = require('./schema/postNotification');
+const postNotificationReceiversSchema = require('./schema/postNotificationReceivers');
+const ErrorResponse = require('./../../core/errorResponse');
 const { ACCESS } = require('./constant');
 const { GENDERS } = require('./../user/constant');
 const { BOOKING_LIMIT_PERIODS } = require('./constant');
@@ -333,23 +336,58 @@ module.exports = (
     return res.status(200).json({ ...place, icons, event });
   });
 
-  app.post('/api/place/:id/notificationRecivers', async (req, res) => {
-    var id = parseInt(req.params.id);
-    if(id){
-      Place.findOneAndUpdate({ _id : id },
-        { $set: { notificationRecivers : req.body.recivers } },
-        { new: true })
-        .then((place) => {
-          res.status(200).json(place.notificationRecivers);
-        })
-        .catch((err) => {
-
-        });
-    }else{
-      res.status(404).json({message: 'place not found' });
+  app.post('/api/place/:id/notification-receivers', async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validation = validate(req.body, postNotificationReceiversSchema);
+      if (validation.error) {
+        throw ErrorResponse.BadRequest(validation.error);
+      }
+      if (!id) {
+        throw ErrorResponse.BadRequest('Specify id');
+      }
+      const place = await Place.findOneAndUpdate(
+        { _id : id },
+        { $set: { notificationRecivers : req.body.receivers } },
+        {
+          returnOriginal: false,
+          returnNewDocument: true,
+        },
+      );
+  
+      return res.status(200).json(place.value.notificationRecivers);
+    } catch (error) {
+      return next(error);
     }
   });
-  app.get('/api/place/:id/notificationRecivers', async (req, res) => {
+
+  app.delete('/api/place/:id/notification-receivers', async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (!id) {
+        throw ErrorResponse.BadRequest('Please specify place id');
+      }
+      const validation = validate(req.body, deleteNotificationReceiverSchema);
+      if (validation.error) {
+        throw ErrorResponse.BadRequest(validation.error);
+      }
+  
+      const place = await Place.findOne({ _id: id });
+      if (!place) {
+        throw ErrorResponse.NotFound('Wrong id');
+      }
+      const { notificationRecivers } = place;
+      const newReceivers = notificationRecivers.filter(receiver => receiver.email !== req.body.email);
+  
+      const newPlace = await Place.findOneAndUpdate({ _id: id }, { $set: { notificationRecivers: newReceivers } });
+      
+      return res.status(200).json(newPlace.value.notificationRecivers);
+    } catch (error) {
+      return next(error);
+    }
+  });
+
+  app.get('/api/place/:id/notification-receivers', async (req, res) => {
     var id = parseInt(req.params.id);
     if(id){
       Place.findOne({ _id : id })
@@ -451,6 +489,7 @@ module.exports = (
           location: place.location,
           access: place.access,
           freeSpots,
+          spots: place.spots,
           icons,
         }
       })
