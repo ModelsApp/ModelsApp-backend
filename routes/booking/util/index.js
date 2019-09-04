@@ -43,7 +43,7 @@ class BookingUtil {
     const dayWeek = date.format('dddd');
     const place = await this.Place.findOne({ _id : id });
     const user = await this.User.findOne({_id : userID });
-    let offers = await this.Offer.find({place: id}).toArray();
+    let offers = await this.Offer.find({ place: id, isActive: true }).toArray();
     if (!omitLimits && !this.placeAllowsUserGender(place, user)) {
       throw ErrorResponse.Unauthorized(`Venue does not accept user's gender`);
     }

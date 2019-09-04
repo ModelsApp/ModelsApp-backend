@@ -10,6 +10,7 @@ var dfs = require('obj-traverse/lib/obj-traverse');
 var entityHelper = require('../../lib/entityHelper');
 const calculateActionPoints = require('../actionPoints/calculator/action');
 const postOfferSchema = require('./schema/postOffer');
+const ErrorResponse = require('./../../core/errorResponse');
 const { OFFER_SCOPES } = require('./constant');
 
 let User, Place, Offer, Counter, Booking, OfferPost, Interval, SamplePost;
@@ -26,14 +27,22 @@ db.getInstance(function (p_db) {
 
 module.exports = function(app, actionPointsRepository, userRepository, offerRepository, validate) {
 
-  // app.get('/api/mutate', function (req, res) {
+  /* Migrate offers, add isActive:true field to all */
+  /*
+  app.get('/api/offer/migrate', async (req, res) => {
+    await Offer.updateMany({}, { $set: { isActive: true } });
+    res.send(await Offer.find({}).toArray());
+  });
+  */
+
+  // app.get('/api/offer/migrate', function (req, res) {
   //   OfferPost.deleteMany({_id: {$in: [12,13,38,39,40,41,42,43,44,45,46,47,48,49,50,51]}});
   //   res.send('mutated');
   // });
 
   /* Migrate offers, add scopes field to all */
   /*
-  app.get('/api/migrate', async (req, res) => {
+  app.get('/api/offer/migrate', async (req, res) => {
     await Offer.updateMany({}, { $set: { scopes: ['regular'] } });
     res.send(await Offer.find({}).toArray());
   });
@@ -46,7 +55,7 @@ module.exports = function(app, actionPointsRepository, userRepository, offerRepo
   app.get('/api/place/offer/:id', function (req, res) {
     var id = parseInt(req.params.id);
 
-    Offer.findOne({_id: id}, async function (err, offer) {
+    Offer.findOne({_id: id, isActive: true}, async function (err, offer) {
       if (!offer) {
         res.json({message: "No such offer"});
       } else {
@@ -67,14 +76,10 @@ module.exports = function(app, actionPointsRepository, userRepository, offerRepo
     });
   });
 
-  app.get('/b', async (req, res) => {
-    res.send(await Booking.find({}).toArray());
-  })
-
-  //Get all the booking belonging to specified place
+  //Get all offers belonging to specified place
   app.get('/api/place/:id/offer', function (req, res) {
     var id = parseInt(req.params.id);
-    const query = { place: id };
+    const query = { place: id, isActive: true };
     const { scopes } = req.query;
     if (scopes) {
       query.scopes = scopes;
@@ -88,7 +93,7 @@ module.exports = function(app, actionPointsRepository, userRepository, offerRepo
     var start = req.body.start;
     var end = req.body.end;
 
-    Offer.find({ place: id, start: start, end: end }).toArray(function (err, offers) {
+    Offer.find({ place: id, start: start, end: end, isActive: true, }).toArray(function (err, offers) {
       res.json(offers);
     });
   });
@@ -101,7 +106,7 @@ module.exports = function(app, actionPointsRepository, userRepository, offerRepo
       return res.status(400).json({message: "invalid parameters"});
     }
 
-    const offer = await Offer.findOne({ _id: offerId });
+    const offer = await Offer.findOne({ _id: offerId, isActive: true });
     const booking = await Booking.findOne({ _id: bookingId });
 
     if (!(offer && booking)) {
@@ -131,7 +136,7 @@ module.exports = function(app, actionPointsRepository, userRepository, offerRepo
     const user = await req.user;
 
     if (offerId && bookingId) {
-      await Offer.findOne({ _id: offerId })
+      await Offer.findOne({ _id: offerId, isActive: true })
         .then(async (offer) => {
           if (!offer) res.status(404).json({ message: "offer not found" });
           await Booking.findOne({ _id: bookingId })
@@ -201,7 +206,7 @@ module.exports = function(app, actionPointsRepository, userRepository, offerRepo
     const user = await req.user;
     const id = parseInt(req.params.id);
 
-      Offer.findOne({_id: id}).then(async (offer) => {
+      Offer.findOne({_id: id, isActive: true}).then(async (offer) => {
         const actions = await generateActions(offer, user.level);
         res.json(actions);
       })
@@ -421,7 +426,7 @@ module.exports = function(app, actionPointsRepository, userRepository, offerRepo
 
         OfferPost.insertOne(offerPost);
 
-        Offer.findOneAndUpdate({ _id: offerPost.offer }, { $set: {post: seq.value.seq } }, async (err, offer) => {
+        Offer.findOneAndUpdate({ _id: offerPost.offer, isActive: true }, { $set: {post: seq.value.seq } }, async (err, offer) => {
           if (err) {
             return res.status(500).json({ message: 'Internal server error' });
           }
@@ -462,7 +467,7 @@ module.exports = function(app, actionPointsRepository, userRepository, offerRepo
     let user = await req.user;
 
     if(bookingId & offerId){
-      let offer = await Offer.findOne({ _id: offerId });
+      let offer = await Offer.findOne({ _id: offerId, isActive: true });
       let booking = await Booking.findOne({ _id: bookingId });
       if(offer && booking){
         var form = new multiparty.Form();
@@ -558,7 +563,7 @@ app.post('/api/offer/:id/booking/:bookingId/post', middleware.isAuthorized, asyn
       res.status(400).json({message: "You arleady done this action"});
     } else {
 
-    Offer.findOne({_id: parseInt(req.params.id)}, function (err, offer) {
+    Offer.findOne({_id: parseInt(req.params.id), isActive: true}, function (err, offer) {
       if (!offer) {
         res.json({message: "No such offer"});
       } else {
@@ -604,7 +609,7 @@ app.post('/api/offer/:id/booking/:bookingId/post', middleware.isAuthorized, asyn
       
                       OfferPost.insertOne(offerPost);
       
-                      Offer.findOneAndUpdate({_id: offerPost.offer}, {$set: {post: seq.value.seq}}, function (err, offer) {
+                      Offer.findOneAndUpdate({_id: offerPost.offer, isActive: true}, {$set: {post: seq.value.seq}}, function (err, offer) {
                         if (!offer.value) {
                           return res.json({message: "No such offer"});
                         } else {
@@ -642,6 +647,65 @@ app.post('/api/offer/:id/booking/:bookingId/post', middleware.isAuthorized, asyn
   }
   });
   });
+  
+  app.post('/api/offer/:id/activate', middleware.isAdmin, async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (!id) {
+        throw ErrorResponse.BadRequest('Specify id');
+      }
+
+      const offer = await Offer.findOne({ _id: id });
+      if (!offer) {
+        throw ErrorResponse.NotFound('Wrong id');
+      }
+
+      const updatedOffer = await Offer.findOneAndUpdate(
+        { _id: id },
+        {
+          $set: {
+            isActive: true,
+          },
+        },
+        {
+          returnOriginal: false,
+          returnNewDocument: true,
+        });
+      return res.status(200).json(updatedOffer.value);
+    } catch (error) {
+      return next(error);
+    }
+  });
+
+  app.post('/api/offer/:id/deactivate', middleware.isAdmin, async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (!id) {
+        throw ErrorResponse.BadRequest('Specify id');
+      }
+
+      const offer = await Offer.findOne({ _id: id });
+      if (!offer) {
+        throw ErrorResponse.NotFound('Wrong id');
+      }
+
+      const updatedOffer = await Offer.findOneAndUpdate(
+        { _id: id },
+        {
+          $set: {
+            isActive: false,
+          },
+        },
+        {
+          returnOriginal: false,
+          returnNewDocument: true,
+        });
+      return res.status(200).json(updatedOffer.value);
+    } catch (error) {
+      return next(error);
+    }
+  });
+
   // Get all OfferPosts created today
   app.get('/api/offerPosts/today', function (req, res) {
     var today = moment().format('DD-MM-YYYY');
@@ -777,10 +841,6 @@ app.post('/api/offer/:id/booking/:bookingId/post', middleware.isAuthorized, asyn
       res.status(404).json({message : "invalid parameters"});
     }
   });
-
-  app.get('/a', async (re, res) => {
-    return res.send(await Offer.find({}).toArray())
-  })
 
   //edit existing offer
   app.put('/api/offer/:id', async (req,res) => {
