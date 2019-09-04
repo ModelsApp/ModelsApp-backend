@@ -309,31 +309,37 @@ module.exports = (
   });
  
   // Get concrete Place and give it Offers, Bookings and Intervals from another entities
-  app.get('/api/place/:id', async (req, res) => {
-    const id = parseInt(req.params.id);
-    let place = await Place.findOne({ _id: id, isActive : true }, { projection: { client: 0 }});
-    if (!place) {
-      return res.status(404).json({ message: 'No such place' });
+  app.get('/api/place/:id', async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      let place = await Place.findOne({ _id: id, isActive : true }, { projection: { client: 0 }});
+      if (!place) {
+        return res.status(404).json({ message: 'No such place' });
+      }
+      const interval = await Interval.findOne({ place: place._id });
+      const books = await Booking.find({ place: place._id, closed: false }).toArray();
+      const offers = await Offer.find({ place: place._id, closed: false }).sort({ price: 1 }).toArray();
+  
+      place.minOffer = null;
+      if(offers.length !== 0) {
+        place.minOffer = offers[0]['price'];
+      }
+  
+      if(interval) place.intervals = interval.intervals;
+      place.bookings = books;
+      place.offers = offers;
+      const icons = await placeUtil.getPlaceIcons(place);
+      let event = await eventRepository.findActivePlaceEvent(place._id);
+      if (event) {
+        event = await eventRepository.joinRequirements(event);
+        event = await eventRepository.joinPlace(event);
+      }
+      place = await placeRepository.joinRequirements(place);
+  
+      return res.status(200).json({ ...place, icons, event });
+    } catch (error) {
+      return next(error);
     }
-    const interval = await Interval.findOne({ place: place._id });
-    const books = await Booking.find({ place: place._id, closed: false }).toArray();
-    const offers = await Offer.find({ place: place._id, closed: false }).sort({ price: 1 }).toArray();
-
-    place.minOffer = null;
-    if(offers.length !== 0) {
-      place.minOffer = offers[0]['price'];
-    }
-
-    if(interval) place.intervals = interval.intervals;
-    place.bookings = books;
-    place.offers = offers;
-    const icons = await placeUtil.getPlaceIcons(place);
-    let event = await eventRepository.findActivePlaceEvent(place._id);
-    event = await eventRepository.joinRequirements(event);
-    event = await eventRepository.joinPlace(event);
-    place = await placeRepository.joinRequirements(place);
-
-    return res.status(200).json({ ...place, icons, event });
   });
 
   app.post('/api/place/:id/notification-receivers', async (req, res, next) => {
