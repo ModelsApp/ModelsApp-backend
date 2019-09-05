@@ -11,7 +11,7 @@ const newAcceptRide = (rideRepository, driverRepository, driverRideRepository) =
     throw ErrorResponse.Unauthorized('Ride has already been accepted');
   }
   const driverRide = await driverRideRepository.findById(ride.driverRideId);
-  await newValidateDriverRide(driverRepository)(driverRide, driverId);
+  await newValidateDriverRide(driverRepository, rideRepository)(driverRide, driverId);
   await newHandleRelations(rideRepository, driverRideRepository)(id, driverId, ride);
 }
 

@@ -47,6 +47,11 @@ class RideRepository extends Repository {
     return this.model.findOne({ _id: oid });
   }
 
+  findMany(ids) {
+    const mappedIds = ids.map(id => getObjectId(id));
+    return this.model.find({ _id: { $in: mappedIds }}).toArray();
+  }
+
   findWhere({ id, userId, pending, fromPlace, toPlace }) {
     const oid = getObjectId(id);
     return this.model.find(

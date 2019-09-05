@@ -7,6 +7,7 @@ const schema = Joi.object().keys({
   }),
   name: Joi.string().strict().required(),
   picture: Joi.string().strict().required(),
+  spots: Joi.number().integer().strict().required(),
 });
 
 module.exports = schema;

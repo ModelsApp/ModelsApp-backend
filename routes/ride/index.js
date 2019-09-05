@@ -49,7 +49,7 @@ module.exports = (app, rideRepository, driverRideRepository, eventBookingReposit
         )(req.body, user._id, false, user.driver);
         const ride = await rideRepository.findById(result._id);
         const driverRide = await driverRideRepository.findById(ride.driverRideId);
-        await newValidateDriverRide(driverRepository)(driverRide, user.driver)
+        await newValidateDriverRide(driverRepository, rideRepository)(driverRide, user.driver)
         await newHandleRelations(rideRepository, driverRideRepository)(ride._id, user.driver, ride);
       });
   
