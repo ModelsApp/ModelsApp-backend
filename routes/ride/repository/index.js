@@ -23,7 +23,7 @@ class RideRepository extends Repository {
     this.placeRepository = placeRepository;
   }
 
-  async insertOne({ userId, driverRideId, from, to, fromPlace, toPlace, eventBookingId, pending = true, driver = null }) {
+  async insertOne({ userId, driverRideId, from, to, fromPlace, toPlace, eventBookingId, address, pending = true, driver = null }) {
     const result = await this.model.insertOne({
       driverRideId,
       userId,
@@ -32,6 +32,7 @@ class RideRepository extends Repository {
       fromPlace,
       toPlace,
       eventBookingId,
+      address,
       pending,
       driver,
       arrived: false,

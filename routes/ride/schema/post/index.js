@@ -12,6 +12,7 @@ const schema = Joi.object().keys({
   fromPlace: Joi.number().integer().strict(),
   toPlace: Joi.number().integer().strict(),
   eventBookingId: Joi.string().strict().required(),
+  address: Joi.string().strict().required(),
 }).or('fromPlace', 'toPlace');
 
 module.exports = schema;
