@@ -15,7 +15,7 @@ const getObjectId = (id) => {
 }
 
 const newDriverRepository = (model) => ({
-  updateOrCreate(car, name, picture) {
+  updateOrCreate(car, name, picture, spots) {
     return new Promise((resolve, reject) => {
       model.findOneAndUpdate(
         {
@@ -26,6 +26,7 @@ const newDriverRepository = (model) => ({
             car,
             name,
             picture,
+            spots,
             createdAt: moment().utc().toISOString(),
           }
         },
