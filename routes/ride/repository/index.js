@@ -16,9 +16,11 @@ const getObjectId = (id) => {
 }
 
 class RideRepository extends Repository {
-  constructor(model, client, driverRideRepository) {
+  constructor(model, client, driverRideRepository, userRepository, placeRepository) {
     super(model, client);
     this.driverRideRepository = driverRideRepository;
+    this.userRepository = userRepository;
+    this.placeRepository = placeRepository;
   }
 
   async insertOne({ userId, driverRideId, from, to, fromPlace, toPlace, eventBookingId, pending = true, driver = null }) {
@@ -130,8 +132,26 @@ class RideRepository extends Repository {
   async joinDriverRide (ride) {
     return { ...ride, driverRide: await this.driverRideRepository.findById(ride.driverRideId) };
   }
+
+  async joinUser (ride) {
+    return { ...ride, user: await this.userRepository.findById(ride.userId) };
+  }
+
+  async joinPlaces (ride) {
+    return {
+      ...ride,
+      fromPlace: ride.fromPlace ? await this.placeRepository.findById(ride.fromPlace) : null,
+      toPlace: ride.toPlace ? await this.placeRepository.findById(ride.toPlace) : null,
+    };
+  }
 }
 
-const newRideRepository = (model, client, driverRideRepository) => new RideRepository(model, client, driverRideRepository);
+const newRideRepository = (
+  model,
+  client,
+  driverRideRepository,
+  userRepository,
+  placeRepository,
+) => new RideRepository(model, client, driverRideRepository, userRepository, placeRepository);
 
 module.exports = newRideRepository;

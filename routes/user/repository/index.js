@@ -11,6 +11,10 @@ class UserRepository extends Repository {
     return this.model.findOne({ _id: id });
   }
 
+  findById (id) {
+    return this.model.findOne({ _id: id });
+  }
+
   async findOneAndUpdateAction (id, actionType, options = {}) {
     const user = await this.model.findOne({ _id: id });
     if (!user) {

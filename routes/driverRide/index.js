@@ -4,7 +4,7 @@ const postSchema = require('./schema/post');
 const selectOneSchema = require('./schema/selectOne');
 const middleware = require('../../config/authMiddleware');
 
-module.exports = (app, driverRideRepository, driverRepository, validate) => {
+module.exports = (app, driverRideRepository, driverRepository, rideRepository, validate) => {
   app.post('/api/driver-ride', middleware.isAdmin, async (req, res) => {
     const validation = validate(req.body, postSchema);
     if (validation.error) {
@@ -81,6 +81,11 @@ module.exports = (app, driverRideRepository, driverRepository, validate) => {
             ...driverRide,
             rides: driverRide.rides.filter(ride => ride.fromPlace && !ride.toPlace),
           }));
+      }
+
+      for (driverRide of driverRides) {
+        driverRide.rides = await Promise.all(driverRide.rides.map((ride) => rideRepository.joinPlaces(ride)));
+        driverRide.rides = await Promise.all(driverRide.rides.map((ride) => rideRepository.joinUser(ride)));
       }
   
       return res.status(200).json(driverRides);

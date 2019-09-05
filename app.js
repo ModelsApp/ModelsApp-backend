@@ -81,7 +81,13 @@ async function bootstrap() {
   const newPlaceExtraRepository = () => placeExtraRepository(PlaceExtra);
   const newPlaceTimeFrameRepository = () => placeTimeFrameRepository(PlaceTimeFrame);
   const newCityRepository = () => cityRepository(City);
-  const newRideRepository = () => rideRepository(Ride, client, newDriverRideRepository());
+  const newRideRepository = () => rideRepository(
+    Ride,
+    client,
+    newDriverRideRepository(),
+    newUserRepository(),
+    newPlaceRepository(),
+  );
   const newDriverRepository = () => driverRepository(Driver);
   const newDriverRideRepository = () => driverRideRepository(DriverRide, rideRepository(Ride));
 
@@ -188,6 +194,7 @@ async function bootstrap() {
     app,
     newDriverRideRepository(),
     newDriverRepository(),
+    newRideRepository(),
     newValidator(),
   );
   require('./routes/eventBooking')(
