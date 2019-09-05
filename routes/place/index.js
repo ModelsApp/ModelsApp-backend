@@ -498,9 +498,8 @@ module.exports = (
           spots: place.spots,
           icons,
         }
-      })
-      .sort((a, b) => b.freeSpots - a.freeSpots));
-    res.status(200).json(mappedPlaces);
+      }));
+    return res.status(200).json(mappedPlaces.sort((a, b) => b.freeSpots - a.freeSpots));
   });
 
   // Get all Places

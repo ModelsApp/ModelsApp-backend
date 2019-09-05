@@ -2,7 +2,7 @@ const ErrorResponse = require('./../../../../core/errorResponse');
 const newValidateDriverRide = require('./validateDriverRide');
 const newHandleRelations = require('./handleRelations');
 
-const newAcceptRide = (rideRepository, driverRepository, driverRideRepository) => async (id, driverId, userId) => {
+const newAcceptRide = (rideRepository, driverRepository, driverRideRepository) => async (id, driverId) => {
   const ride = await rideRepository.findById(id);
   if (!ride) {
     throw ErrorResponse.NotFound('No ride with given id');
