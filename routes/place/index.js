@@ -525,20 +525,16 @@ module.exports = (
   });
 
   // Delete the place
-  app.delete('/api/place/:id', function (req, res) {
-    var id = parseInt(req.params.id)
-    Place.deleteOne({ _id: id }, function (err, deleted) {
-      if(deleted.deletedCount !== 1){
-        res.json({ message: "Wrong id" });
-      } else {
-        Offer.updateMany({ place: id }, { $set: { place: null }});
-        Booking.updateMany({ place: id }, { $set: { place: null }});
-        OfferPost.updateMany({ place: id }, { $set: { place: null }});
-        SamplePost.deleteMany({ place: id });
-        res.json({ message: "Deleted" });
-      }
-    });
+  app.delete('/api/place/:id', async (req, res) => {
+    const id = parseInt(req.params.id)
+    await Place.deleteOne({ _id: id });
+    await Offer.deleteMany({ place: id });
+    await Booking.deleteMany({ place: id });
+    await OfferPost.deleteMany({ place: id });
+    await SamplePost.deleteMany({ place: id });
+    return res.json({ message: "Deleted" });
   });
+
   app.delete('/api/place/:id/images', async (req,res) => {
     var id = parseInt(req.params.id);
     var imageId = req.body.imageId;

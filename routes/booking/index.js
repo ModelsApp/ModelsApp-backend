@@ -330,10 +330,10 @@ module.exports = (app, bookingRepository, eventBookingRepository, eventRepositor
   });
 
   app.post('/api/v2/place/:id/book', async (req, res, next) => {
-    let id = parseInt(req.params.id);
-    let userID = parseInt(req.body.userID);
-    let intervalId = req.body.intervalId;
-    let date = moment(req.body.date);
+    const id = parseInt(req.params.id);
+    const userID = parseInt(req.body.userID);
+    const intervalId = req.body.intervalId;
+    const date = moment(req.body.date);
 
     try {
       const { fullDate, offers, chosenInterval, place } = await bookingUtil.bookPossible(id, userID, intervalId, date);

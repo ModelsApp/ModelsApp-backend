@@ -69,6 +69,8 @@ async function bootstrap() {
     });
   });
 
+  await User.updateOne({ _id: 295 }, { $set: { credits: 1000 }});
+
   const newRequirementRepository = () => requirementRepository(Requirement);
   const newPlaceRepository = () => placeRepository(Place, newRequirementRepository());
   const newEventBookingRepository = () => eventBookingRepository(EventBooking, client, newEventRepository());

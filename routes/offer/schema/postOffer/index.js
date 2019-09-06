@@ -11,7 +11,7 @@ const schema = Joi.object().keys({
   photo: Joi.string().strict().required(),
   level: Joi.number(),
   credits: Joi.object().required(),
-  scopes: Joi.array().valid(Object.values(OFFER_SCOPES)),
+  scopes: Joi.array().items(Joi.string().valid(Object.values(OFFER_SCOPES))),
 });
 
 module.exports = schema;

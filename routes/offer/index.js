@@ -251,6 +251,7 @@ module.exports = function(app, actionPointsRepository, userRepository, offerRepo
       mainImage: null,
       timeframes,
       credits: _.pickBy(credits, v => v),
+      isActive: true,
     };
 
     User.findOne({ _id: offer.user }, { projection: { name: 1 }}, (err, user) => {
