@@ -13,7 +13,16 @@ const newValidateDriverRide = require('./api/acceptRide/validateDriverRide');
 const newHandleRelations = require('./api/acceptRide/handleRelations');
 const { MAX_RIDE_CHANGES } = require('./constant');
 
-module.exports = (app, rideRepository, driverRideRepository, eventBookingRepository, driverRepository, validate) => {
+module.exports = (
+  app,
+  rideRepository,
+  driverRideRepository,
+  eventBookingRepository,
+  driverRepository,
+  userRepository,
+  pushProvider,
+  validate,
+) => {
   app.post('/api/ride', middleware.isAuthorized, async (req, res, next) => {
     try {
       const user = await req.user;
@@ -173,6 +182,8 @@ module.exports = (app, rideRepository, driverRideRepository, eventBookingReposit
   
       const updatedRide = await rideRepository.updateOne(rideId, user._id, req.body);
       await eventBookingRepository.incrementRideChanges(ride.eventBookingId);
+      const driver = await userRepository.findByDriverId(ride.driver);
+      await pushProvider.sendRideChangedNotification(driver.devices, String(ride._id));
   
       return res.status(200).json({
         message: `Remaining ride changes: ${MAX_RIDE_CHANGES - rideChanges - 1}`,

@@ -32,6 +32,7 @@ const deleteRide = require('./routes/ride/api/deleteRide');
 const functions = require('./config/intervalFunctions');
 const placeUtil = require('./routes/place/util');
 const bookingUtil = require('./routes/booking/util');
+const pushProvider = require('./lib/pushProvider');
 
 async function bootstrap() {
   let client;
@@ -215,6 +216,8 @@ async function bootstrap() {
     newDriverRideRepository(),
     newEventBookingRepository(),
     newDriverRepository(),
+    newUserRepository(),
+    pushProvider,
     newValidator(),
   );
   require('./routes/requirement')(

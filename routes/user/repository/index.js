@@ -59,6 +59,10 @@ class UserRepository extends Repository {
     }
     return this.model.updateOne({ _id: user._id }, { $inc: { credits: toPay }});
   }
+
+  findByDriverId (driverId) {
+    return this.model.findOne({ driver: driverId });
+  }
 }
 
 module.exports = (model) => new UserRepository(model);
