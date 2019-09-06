@@ -91,7 +91,8 @@ module.exports = (app, eventRepository, placeRepository, requirementRepository, 
 
   app.get('/api/event', middleware.isAuthorized, async (req, res) => {
     const { id } = req.query;
-    const events = await eventRepository.findWhere({ id });
+    let events = await eventRepository.findWhere({ id });
+    events = await Promise.all(events.map((event) => eventRepository.joinRequirements(event)));
 
     return res.status(200).json(events);
   });

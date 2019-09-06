@@ -124,14 +124,11 @@ class EventRepository extends Repository {
   async joinRequirements(event) {
     return {
       ...event,
-      requirements: await Object.entries(event.requirements)
-        .reduce(async (acc, [key, value]) => ({
-          ...(await acc),
-          [key]: {
+      requirements: await Promise.all(Object.entries(event.requirements)
+        .map(async ([key, value]) => ({
             ...(await this.requirementRepository.findOneByName(key)),
             value,
-          }
-        }), Promise.resolve({})),
+        }))),
     };
   }
 
