@@ -11,6 +11,7 @@ const newPostRide = require('./api/postRide');
 const newAcceptRide = require('./api/acceptRide');
 const newValidateDriverRide = require('./api/acceptRide/validateDriverRide');
 const newHandleRelations = require('./api/acceptRide/handleRelations');
+const rateRideSchema = require('./schema/rateRide');
 const { MAX_RIDE_CHANGES } = require('./constant');
 
 module.exports = (
@@ -153,6 +154,25 @@ module.exports = (
       }
 
       return res.status(200).json(result);
+    } catch (error) {
+      return next(error);
+    }
+  });
+
+  app.post('/api/ride/rate', middleware.isAuthorized, async (req, res, next) => {
+    try {
+      const user = await req.user;
+
+      const validation = validate(req.body, rateRideSchema);
+      if (validation.error) {
+        throw ErrorResponse.BadRequest(validation.error);
+      }
+
+      const { id, stars } = req.body;
+
+      await rideRepository.rate(id, user._id, stars);
+
+      return res.status(200).json({ message: 'ok' });
     } catch (error) {
       return next(error);
     }

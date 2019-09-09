@@ -1,19 +1,6 @@
 const moment = require('moment');
-const { ObjectId } = require('mongodb');
 const Repository = require('./../../../core/repository');
-
-const getObjectId = (id) => {
-  if (!id) {
-    return null;
-  }
-  let oid;
-  try {
-    oid = new ObjectId(id);
-  } catch (e) {
-    return null;
-  }
-  return oid;
-}
+const ErrorResponse = require('./../../../core/errorResponse');
 
 class RideRepository extends Repository {
   constructor(model, client, driverRideRepository, userRepository, placeRepository) {
@@ -36,14 +23,23 @@ class RideRepository extends Repository {
       pending,
       driver,
       arrived: false,
+      stars: null,
       createdAt: moment().utc().toISOString(),
     });
 
     return result.ops[0];
   }
 
+  async rate(id, userId, stars) {
+    const oid = this.getObjectId(id);
+    const updated = await this.model.updateOne({ _id: oid, userId }, { $set: { stars }});
+    if (updated.result.n === 0) {
+      throw ErrorResponse.NotFound('Wrong ride or user id!');
+    }
+  }
+
   findById (id) {
-    const oid = getObjectId(id);
+    const oid = this.getObjectId(id);
     if (!oid) {
       return null;
     }
@@ -51,12 +47,12 @@ class RideRepository extends Repository {
   }
 
   findMany(ids) {
-    const mappedIds = ids.map(id => getObjectId(id));
+    const mappedIds = ids.map(id => this.getObjectId(id));
     return this.model.find({ _id: { $in: mappedIds }}).toArray();
   }
 
   findWhere({ id, userId, pending, fromPlace, toPlace }) {
-    const oid = getObjectId(id);
+    const oid = this.getObjectId(id);
     return this.model.find(
         {
         ...(oid && { _id: oid }),
@@ -69,7 +65,7 @@ class RideRepository extends Repository {
   }
 
   deleteOne (id) {
-    const oid = getObjectId(id);
+    const oid = this.getObjectId(id);
     if (!oid) {
       return null;
     }
@@ -91,7 +87,7 @@ class RideRepository extends Repository {
     driver,
     arrived,
   }) {
-    const oid = getObjectId(id);
+    const oid = this.getObjectId(id);
     const result = await this.model.findOneAndUpdate(
       {
         _id: oid,
@@ -119,7 +115,7 @@ class RideRepository extends Repository {
   }
 
   accept (id, driver) {
-    const oid = getObjectId(id);
+    const oid = this.getObjectId(id);
     if (!oid) {
       return null;
     }
