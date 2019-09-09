@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const db = require('../../config/connection');
 const newBookingUtil = require('./util');
 const middleware = require('./../../config/authMiddleware');
+const ErrorResponse = require('./../../core/errorResponse');
 
 let User, Place, Offer, Counter, Booking, OfferPost, Interval, SamplePost;
 db.getInstance(function (p_db) {
@@ -18,7 +19,7 @@ db.getInstance(function (p_db) {
   SamplePost = p_db.collection('sampleposts');
 });
 
-module.exports = (app, bookingRepository, eventBookingRepository, eventRepository, placeUtil) => {
+module.exports = (app, placeRepository, userRepository, bookingRepository, eventBookingRepository, eventRepository, placeUtil) => {
 
   const bookingUtil = newBookingUtil(Place, User, Interval, Offer, Booking, placeUtil);
 
@@ -80,39 +81,30 @@ module.exports = (app, bookingRepository, eventBookingRepository, eventRepositor
   });
   */
 
-  app.get('/api/place/:id/book/slots', async (req, res) => {
-    const id = parseInt(req.params.id);
-    const reqDate = req.body.date || req.query.date;
-    const day = moment(reqDate);
-    const date = moment(reqDate).format('DD-MM-YYYY');
-    if(!date) {
-      res.json({ message: "Please, provide the date" });
-    } else {
-      if (day.isValid()) {
-        try {
-          const place = await (() => new Promise(async (resolve, reject) => {
-            Place.findOne({ _id: id }, (err, place) => {
-              if (err) {
-                return reject(err);
-              }
-              if (!place) {
-                return reject({ message: "No such place" });
-              }
-              return resolve(place);
-            });
-          }))();
-          const singlePlaceSlots = await getSinglePlaceSlots(place, day, date);
-          if (!singlePlaceSlots) {
-            return res.json({ message: "This place has no booking intervals" });
-          }
-          return res.json(singlePlaceSlots);
-        } catch (error) {
-          console.error(error);
-          res.json({ message: "Something went wrong"});
-        }
-      } else {
-        res.json({message: "Invalid date format, accepted format is YYYY-DD-MM"});
+  app.get('/api/place/:id/book/slots', async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      const reqDate = req.body.date || req.query.date;
+      const day = moment(reqDate);
+      const date = moment(reqDate).format('DD-MM-YYYY');
+      if(!date) {
+        throw ErrorResponse.BadRequest('Please, provide the date');
       }
+      if (!day.isValid()) {
+        throw ErrorResponse.BadRequest('Invalid date format, accepted format is YYYY-DD-MM');
+      }
+      const place = await placeRepository.findById(id);
+      if (!place) {
+        throw ErrorResponse.NotFound('Wrong place id');
+      }
+
+      const singlePlaceSlots = await getSinglePlaceSlots(place, day, date);
+      if (!singlePlaceSlots) {
+        throw ErrorResponse.NotFound('This place has no booking intervals');
+      }
+      return res.status(200).json(singlePlaceSlots);
+    } catch (error) {
+      return next(error);
     }
   });
 
@@ -140,44 +132,37 @@ module.exports = (app, bookingRepository, eventBookingRepository, eventRepositor
     }
   });
 
-  app.post('/api/place/book/slots', async (req, res) => {
-    const { date: reqDate } = req.body;
-    if (!reqDate) {
-      return res.json({ message: "Please, provide the date" });
-    }
-    let day, date;
+  // Where do we use this endpoint, why not GET v2/place?
+  app.post('/api/place/book/slots', async (req, res, next) => {
     try {
-      day = moment(reqDate);
-      date = moment(reqDate).format('DD-MM-YYYY');
-    } catch (error) {
-      return res.json({ message: "Please, provide correct date" });
-    }
-    const placesSlots = await (() => new Promise((resolve, reject) => {
-      Place.find({ isActive : true }).toArray(async (err, places) => {
-        if (err) {
-          return reject(err);
+      const { date: reqDate } = req.body;
+      if (!reqDate) {
+        throw ErrorResponse.BadRequest('Please, provide the date');
+      }
+      const day = moment(reqDate);
+      const date = moment(reqDate).format('DD-MM-YYYY');
+      const places = await Place.find({ isActive : true }).toArray();
+      const placesSlots = await Promise.all(places.map(async place => {
+        let freeSpots = await getSinglePlaceSlots(place, day, date);
+        if (freeSpots && freeSpots.length) {
+          freeSpots = freeSpots.reduce((acc, slot) => acc + slot.free, 0);
+        } else {
+          freeSpots = 0;
         }
-        const placesSlots = await Promise.all(places.map(async place => {
-          let freeSpots = await getSinglePlaceSlots(place, day, date);
-          if (freeSpots && freeSpots.length) {
-            freeSpots = freeSpots.reduce((acc, slot) => acc + slot.free, 0);
-          } else {
-            freeSpots = 0;
-          }
-          return {
-            name: place.name,
-            address: place.address,
-            location: place.location,
-            type: place.type,
-            mainImage: place.mainImage,
-            freeSpots,
-          }
-        }));
-        return resolve(placesSlots);
-      });
-    }))();
+        return {
+          name: place.name,
+          address: place.address,
+          location: place.location,
+          type: place.type,
+          mainImage: place.mainImage,
+          freeSpots,
+        }
+      }));
 
-    return res.json(placesSlots.sort((a, b) => b.freeSpots - a.freeSpots));
+      return res.json(placesSlots.sort((a, b) => b.freeSpots - a.freeSpots));
+    } catch (error) {
+      return next(error);
+    }
   });
 
   getSinglePlaceSlots = (place, day, date) => {
@@ -211,92 +196,87 @@ module.exports = (app, bookingRepository, eventBookingRepository, eventRepositor
   }
 
   // Get the specific Booking
-  app.get('/api/place/book/:id', (req, res, next) => {
-    var id = parseInt(req.params.id);
-    Booking.findOne({_id: id}, async function (err, book) {
-      if (!book) {
-        res.json({message: "No such booking"});
-      } else {
-        let user;
-        try {
-          user = await User.findOne({ _id: book.user });
-        } catch (error) {
-          return res.status(500).json({ message: 'Internal server error' });
-        }
-        if (!user) {
-          return res.status(404).json({ message: 'User not found' });
-        }
-        // Check if the booking is older than 24 hours
-        var date = moment(book.date + ' ' + book.endTime, 'DD-MM-YYYY HH.mm');
-        var tommorow = moment(date.add('1', 'days').format('DD-MM-YYYY'), 'DD-MM-YYYY');
-        var diff = tommorow.diff(moment(), 'days');
-        if (diff < 0 && !book.closed) {
-          Booking.findOneAndUpdate({_id: book._id}, {$set: {closed: true}});
-          book.closed = true;
-        }
+  app.get('/api/place/book/:id', async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      const booking = await bookingRepository.findById(id);
 
-        book.place = await Place.findOne({_id: book.place}, {
-          projection: { name: 1, type: 1, description: 1, socials: 1, location: 1, address: 1, photos: 1 }
-        });
-
-        book.place.photos = book.place.photos[0];
-        if (book.offers) {
-          book.offers = await Offer.find({_id: {$in: book.offers}}).toArray();
-          try {
-            book.offers = bookingUtil.generateOfferPrices(book.offers, user.level);
-          } catch (error) {
-            return next(error);
-          }
-          return res.json({ place: book });
-        } else {
-          return res.json({ place: book });
-        }
+      if (!booking) {
+        throw ErrorResponse.NotFound('Wrong id!');
       }
-    });
+
+      const user = await userRepository.findById(booking.user);
+      if (!user) {
+        throw ErrorResponse.NotFound('User not found');
+      }
+
+      // Check if the booking is older than 24 hours
+      const date = moment(booking.date + ' ' + booking.endTime, 'DD-MM-YYYY HH.mm');
+      const tommorow = moment(date.add('1', 'days').format('DD-MM-YYYY'), 'DD-MM-YYYY');
+      const diff = tommorow.diff(moment(), 'days');
+      if (diff < 0 && !booking.closed) {
+        await bookingRepository.close(booking._id);
+        booking.closed = true;
+      }
+
+      booking.place = await placeRepository.findById(booking.place);
+      if (booking.place) {
+        booking.place.photos = booking.place.photos[0];
+      }
+      if (booking.offers) {
+        booking.offers = await Offer.find({_id: {$in: booking.offers}}).toArray();
+        booking.offers = bookingUtil.generateOfferPrices(booking.offers, user.level);
+      }
+
+      return res.status(200).json({ place: booking });
+    } catch (error) {
+      return next(error);
+    }
   });
 
-  //Get all the booking belonging to specified place
-  app.get('/api/place/:id/book', function (req, res) {
-    var id = parseInt(req.params.id);
-    Booking.find({place: id}).toArray(async function (err, books) {
-      var full = await Promise.all(books.map(async function (book) {
-        var place = await Place.findOne({_id: book.place}, {
-          projection: { name: 1, type: 1, description: 1, socials: 1, location: 1, address: 1, photos: 1, mainImage: 1 }
-        });
+  // Get all the bookings belonging to specified place
+  app.get('/api/place/:id/book', async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      const bookings = await bookingRepository.findWhere({ place: id });
+      const bookingsMapped = await Promise.all(bookings.map(async (booking) => {
+        const place = await placeRepository.findById(booking.place);
         if (!place) {
-          book.place = {};
+          booking.place = {};
         } else {
           place.photo = place.mainImage;
           delete place.photos;
-          book.place = place;
+          booking.place = place;
         }
-
-        var date = moment(book.date + ' ' + book.endTime, 'DD-MM-YYYY HH.mm');
-        var tommorow = moment(date.add('1', 'days').format('DD-MM-YYYY'), 'DD-MM-YYYY');
-        var diff = tommorow.diff(moment(), 'days');
+  
+        const date = moment(book.date + ' ' + book.endTime, 'DD-MM-YYYY HH.mm');
+        const tommorow = moment(date.add('1', 'days').format('DD-MM-YYYY'), 'DD-MM-YYYY');
+        const diff = tommorow.diff(moment(), 'days');
         if (diff < 0 && !book.closed) {
-          Booking.findOneAndUpdate({_id: book._id}, {$set: {closed: true}});
-          book.closed = true;
+          await bookingRepository.close(book._id);
+          booking.closed = true;
         }
-
+  
         if (diff < 0) {
           return;
         }
-
-        return book;
-      }));
-      var newFull = full.filter(function (elem) {
-        return elem !== undefined;
-      });
-
-      res.json(newFull);
-    });
+  
+        return booking;
+      })).filter(booking => booking);
+  
+      return res.status(200).json(bookingsMapped);
+    } catch (error) {
+      return next(error);
+    }
   });
 
   // Deletes the booking document and all links to it
   app.delete('/api/place/book/:id', async (req, res, next) => {
-    const id = parseInt(req.params.id);
     try {
+      const id = parseInt(req.params.id);
+      if (!id) {
+        throw ErrorResponse.BadRequest('Incorrect id');
+      }
       const response = await bookingUtil.unbook(id);
       return res.status(response.status).json(response.message);
     } catch (error) {
@@ -308,25 +288,25 @@ module.exports = (app, bookingRepository, eventBookingRepository, eventRepositor
   app.put('/api/place/book/:id/offer', async (req, res, next) => {
     try {
       const id = parseInt(req.params.id);
-      const offer = parseInt(req.body.offerID);
+      const offerId = parseInt(req.body.offerID);
   
-      const book = await bookingUtil.addOfferToBooking(id, offer);
+      const book = await bookingUtil.addOfferToBooking(id, offerId);
       return res.status(200).json({ message: 'Added', data: book });
     } catch (error) {
       next(error);
     }
   });
 
-  // Close the Booooooking
-  app.put('/api/place/book/:id', function (req, res) {
-    var id = parseInt(req.params.id);
-    Booking.findOneAndUpdate({_id: id}, {$set: {closed: true}}, function (err, book) {
-      if (!book.value) {
-        res.json({message: "No such booking"});
-      } else {
-        res.json({message: "Booking is closed"});
-      }
-    })
+  // Close the Booking
+  app.put('/api/place/book/:id', async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      await bookingRepository.close(id);
+  
+      return res.status(200).json({ message: 'Booking closed' });
+    } catch (error) {
+      return next(error);
+    }
   });
 
   app.post('/api/v2/place/:id/book', async (req, res, next) => {
@@ -348,55 +328,55 @@ module.exports = (app, bookingRepository, eventBookingRepository, eventRepositor
   // Create the Booking and link it with User and the Place
   // Using Intervals for it
   app.post('/api/place/:id/book', async (req, res, next) => {
-    var id = parseInt(req.params.id);
-    const { userID } = req.body;
-    const p = await Place.findOne({ _id: id });
-    if (!p) {
-      return res.status(404).json({ message: 'Place not found' });
-    }
-
-    if (!userID) {
-      return res.json({ message: 'Required fields are not fulfilled' });
-    }
-
-    let user;
     try {
-      user = await User.findOne({ _id: userID });
-    } catch (error) {
-      return res.status(500).json({ message: 'Internal server error' });
-    }
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
+      const id = parseInt(req.params.id);
+      const { userID, interval, date } = req.body;
 
-    try {
+      if (!id) {
+        throw ErrorResponse.BadRequest('Provide place id');
+      }
+      if (!userID) {
+        throw ErrorResponse.BadRequest('Provide user id');
+      }
+      if (!interval) {
+        throw ErrorResponse.BadRequest('Provide interval');
+      }
+      if (!date) {
+        throw ErrorResponse.BadRequest('Provide date');
+      }
+
+      const p = await placeRepository.findById(id);
+      if (!p) {
+        throw ErrorResponse.NotFound('Place not found');
+      }
+      const user = await userRepository.findById(userID);
+      if (!user) {
+        throw ErrorResponse.NotFound('User not found');
+      }
+
       if (!bookingUtil.placeAllowsUserGender(p, user)) {
-        return res.status(403).json({ message: `Venue does not accept user's gender` });
+        throw ErrorResponse.Unauthorized(`Venue does not accept user's gender`);
       }
       if (await bookingUtil.userBookingsLimitReached(user, p)) {
-        return res.status(403).json({ message: 'User has exceeded his monthly bookings limit' });
+        throw ErrorResponse.Unauthorized(`User has exceeded his monthly bookings limit`);
       }
       if (!(await bookingUtil.userCanBook(user, p))) {
-        return res.status(403).json({ message: `User's subscription plan is insufficient for this venue` });
+        throw ErrorResponse.Unauthorized(`User's subscription plan is insufficient for this venue`);
       }
-    } catch (error) {
-      return next(error);
-    }
 
-    if (req.body.interval !== undefined && req.body.date && id) {
-      var intervalNum = parseInt(req.body.interval);
+      const intervalNum = parseInt(interval);
       const newBooking = {
         user: parseInt(req.body.userID),
         place: id,
-        date: req.body.date, //moment(req.body.date).format('DD-MM-YYYY')
+        date, //moment(req.body.date).format('DD-MM-YYYY')
         creationDate: new Date().toISOString(),
         closed: false,
         claimed: false,
         offers: [],
         offerActions: [],
       };
-      //newBooking.day = moment(req.body.date).format('dddd');
 
+      // refactor this further
       let minOfferPrice = 0;
       let offers;
       if (req.body.offers) {
@@ -407,11 +387,7 @@ module.exports = (app, bookingRepository, eventBookingRepository, eventRepositor
       } else {
         offers = await Offer.find({place: newBooking.place}, {projection: {level: 1}}).toArray();
       }
-      try {
-        offers = bookingUtil.generateOfferPrices(offers, user.level);
-      } catch (error) {
-        return next(error);
-      }
+      offers = bookingUtil.generateOfferPrices(offers, user.level);
       const offerPrices = offers.map(o => o.price);
       minOfferPrice = offerPrices.sort((a, b) => a - b)[0];
 
@@ -475,7 +451,7 @@ module.exports = (app, bookingRepository, eventBookingRepository, eventRepositor
                                   Booking.insertOne(newBooking);
                                   res.json({message: "Booked"});
                                 });
-
+  
                                 Booking.insertOne(newBooking).then((booking) => {
                                   bookingUtil.sendBookingEmailMessage(place, newBooking).then(()=> {
                                     res.json({message: "Booked"});
@@ -494,8 +470,9 @@ module.exports = (app, bookingRepository, eventBookingRepository, eventRepositor
             });
           }
       });
-    } else {
-      res.json({message: "Required fields are not fulfilled"});
+
+    } catch (error) {
+      return next(error);
     }
   });
 

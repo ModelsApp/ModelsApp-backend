@@ -133,6 +133,8 @@ async function bootstrap() {
   );
   require('./routes/booking')(
     app,
+    newPlaceRepository(),
+    newUserRepository(),
     newBookingRepository(),
     newEventBookingRepository(),
     newEventRepository(),
