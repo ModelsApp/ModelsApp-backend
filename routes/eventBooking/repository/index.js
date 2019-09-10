@@ -102,6 +102,10 @@ class EventBookingRepository extends Repository {
     return this.model.findOne({ _id: oid });
   }
 
+  findByEventId(id) {
+    return this.model.find({ eventId: id }).toArray();
+  }
+
   addRide(id, ride) {
     return this._addToArray(id, 'rides', ride);
   }

@@ -12,7 +12,7 @@ const validatePlacesOffers = require('./api/place/validatePlacesOffers');
 const validatePlaceOffers = require('./api/place/validatePlaceOffers');
 const ErrorResponse = require('./../../core/errorResponse');
 
-module.exports = (app, eventRepository, placeRepository, requirementRepository, bookUtil, validate) => {
+module.exports = (app, eventRepository, placeRepository, requirementRepository, deleteEvent, bookUtil, validate) => {
   app.post('/api/event', middleware.isAdmin, async (req, res) => {
     const allRequirements = await requirementRepository.getAll();
     const intervalIds = (await bookUtil.getPlaceIntervals(req.body.placeId)).map(i => i._id);
@@ -51,19 +51,19 @@ module.exports = (app, eventRepository, placeRepository, requirementRepository, 
     return res.status(201).json(event);
   });
 
-  app.delete('/api/event', middleware.isAdmin, async (req, res) => {
-    const validation = validate(req.body, oneEventSchema);
-    if (validation.error) {
-      return res.status(400).json({ message: validation.error });
-    }
-
+  app.delete('/api/event', middleware.isAdmin, async (req, res, next) => {
     try {
-      await eventRepository.deleteOne(req.body.eventId);
-    } catch (err) {
-      return res.status(400).json({ message: 'Wrong id!' });
+      const validation = validate(req.body, oneEventSchema);
+      if (validation.error) {
+        throw ErrorResponse.BadRequest(validation.error);
+      }
+  
+      await deleteEvent(req.body.eventId);
+  
+      return res.status(200).send({ message: 'Event deleted' });
+    } catch (error) {
+      return next(error);
     }
-
-    return res.status(200).send({ message: 'Event deleted' });
   });
 
   app.put('/api/event', async (req, res) => {

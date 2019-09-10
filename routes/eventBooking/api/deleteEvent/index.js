@@ -8,8 +8,13 @@ const newDeleteEventBooking = (
   userRepository,
   bookingUtil,
   deleteRide,
-) => async (id, user) => {
-  let eventBooking = await eventBookingRepository.findWhere({ id, userId: user._id });
+) => async (id, user, disableUser = false) => {
+  let eventBooking;
+  if (!disableUser) {
+    eventBooking = await eventBookingRepository.findWhere({ id, userId: user._id });
+  } else {
+    eventBooking = await eventBookingRepository.findWhere({ id });
+  }
   if (!eventBooking.length) {
     throw ErrorResponse.NotFound();
   }
@@ -25,7 +30,9 @@ const newDeleteEventBooking = (
     throw ErrorResponse.Unauthorized(`Couldn't unbook event as it starts in less than 2 hours`);
   }
   await eventBookingRepository.transaction(async () => {
-    await eventRepository.unbookEvent(eventBooking.eventId, user._id);
+    if (user) {
+      await eventRepository.unbookEvent(eventBooking.eventId, user._id);
+    }
 
     for (const bookingId of eventBooking.bookings) {
       await bookingUtil.unbook(bookingId);

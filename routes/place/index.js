@@ -37,6 +37,7 @@ module.exports = (
   cityRepository,
   eventRepository,
   requirementRepository,
+  deleteEvent,
   placeUtil,
   validate,
 ) => {
@@ -525,14 +526,26 @@ module.exports = (
   });
 
   // Delete the place
-  app.delete('/api/place/:id', async (req, res) => {
-    const id = parseInt(req.params.id)
-    await Place.deleteOne({ _id: id });
-    await Offer.deleteMany({ place: id });
-    await Booking.deleteMany({ place: id });
-    await OfferPost.deleteMany({ place: id });
-    await SamplePost.deleteMany({ place: id });
-    return res.json({ message: "Deleted" });
+  app.delete('/api/place/:id', async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      const place = await Place.findOne({ _id: id });
+      if (!place) {
+        throw ErrorResponse.NotFound('Place not found');
+      }
+      const events = await eventRepository.findByPlaceId(id);
+      for (const event of events) {
+        await deleteEvent(event._id);
+      }
+      await Place.deleteOne({ _id: id });
+      await Offer.deleteMany({ place: id });
+      await Booking.deleteMany({ place: id });
+      await OfferPost.deleteMany({ place: id });
+      await SamplePost.deleteMany({ place: id });
+      return res.json({ message: "Deleted" });
+    } catch (error) {
+      return next(error);
+    }
   });
 
   app.delete('/api/place/:id/images', async (req,res) => {

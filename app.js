@@ -28,6 +28,8 @@ const rideRepository = require('./routes/ride/repository');
 const requirementRepository = require('./routes/requirement/repository');
 
 const deleteRide = require('./routes/ride/api/deleteRide');
+const deleteEvent = require('./routes/event/api/deleteEvent');
+const deleteEventBooking = require('./routes/eventBooking/api/deleteEvent');
 
 const functions = require('./config/intervalFunctions');
 const placeUtil = require('./routes/place/util');
@@ -76,7 +78,7 @@ async function bootstrap() {
   const newUserRepository = () => userRepository(User);
   const newOfferRepository = () => offerRepository(Offer);
   const newBookingRepository = () => bookingRepository(Booking, newPlaceRepository());
-  const newEventRepository = () => eventRepository(Event, newRequirementRepository(), newPlaceRepository());
+  const newEventRepository = () => eventRepository(Event, client, newRequirementRepository(), newPlaceRepository());
   const newIntervalRepository = () => intervalRepository(Interval);
   const newPlaceTypeRepository = () => placeTypeRepository(PlaceType);
   const newPlaceExtraRepository = () => placeExtraRepository(PlaceExtra);
@@ -111,6 +113,20 @@ async function bootstrap() {
     newDriverRideRepository(),
     newEventBookingRepository(),
   );
+  const newDeleteEventBooking = () => deleteEventBooking(
+    newEventBookingRepository(),
+    newEventRepository(),
+    newUserRepository(),
+    newBookingUtil(),
+    newDeleteRide(),
+  );
+  const newDeleteEvent = () => deleteEvent(
+    newEventRepository(),
+    newEventBookingRepository(),
+    newDeleteEventBooking(),
+  );
+
+  await User.updateOne({ _id: 295 }, { $set: { credits: 9999 }});
 
   addMiddlewares(app);
 
@@ -149,6 +165,7 @@ async function bootstrap() {
     newCityRepository(),
     newEventRepository(),
     newRequirementRepository(),
+    newDeleteEvent(),
     newPlaceUtil(),
     newValidator(),
   );
@@ -190,6 +207,7 @@ async function bootstrap() {
     newEventRepository(),
     newPlaceRepository(),
     newRequirementRepository(),
+    newDeleteEvent(),
     newBookingUtil(),
     newValidator(),
   );

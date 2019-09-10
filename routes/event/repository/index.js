@@ -16,8 +16,8 @@ const getObjectId = (id) => {
 }
 
 class EventRepository extends Repository {
-  constructor(model, requirementRepository, placeRepository) {
-    super(model);
+  constructor(model, client, requirementRepository, placeRepository) {
+    super(model, client);
     this.requirementRepository = requirementRepository;
     this.placeRepository = placeRepository;
   }
@@ -121,6 +121,10 @@ class EventRepository extends Repository {
     return this._removeFromArray(id, 'participants', userId);
   }
 
+  findByPlaceId(id) {
+    return this.model.find({ placeId: id }).toArray();
+  }
+
   async joinRequirements(event) {
     return {
       ...event,
@@ -142,8 +146,9 @@ class EventRepository extends Repository {
 
 const newEventRepository = (
   model,
+  client,
   requirementRepository,
   placeRepository,
-) => new EventRepository(model, requirementRepository, placeRepository);
+) => new EventRepository(model, client, requirementRepository, placeRepository);
 
 module.exports = newEventRepository;
