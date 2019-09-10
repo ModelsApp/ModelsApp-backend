@@ -9,9 +9,9 @@ module.exports = (app, driverRepository, rideRepository, validate) => {
       return res.status(400).json({ message: validation.error });
     }
 
-    const { car, name, picture, spots } = req.body;
+    const { car, name, picture, spots, phone } = req.body;
 
-    const result = await driverRepository.updateOrCreate(car, name, picture, spots);
+    const result = await driverRepository.updateOrCreate(car, name, picture, spots, phone);
 
     return res.status(200).send(result.value);
   });
