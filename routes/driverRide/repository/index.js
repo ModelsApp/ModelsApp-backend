@@ -115,6 +115,10 @@ class DriverRideRepository extends Repository {
   findByDriverId(driverId) {
     return this.model.find({ drivers: String(driverId) }).toArray();
   }
+
+  findByPlaceId(placeId) {
+    return this.model.find({ place: placeId }).toArray();
+  }
 }
 
 const newDriverRideRepository = (model, rideRepository) => new DriverRideRepository(model, rideRepository);

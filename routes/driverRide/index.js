@@ -3,6 +3,7 @@ const _ = require('lodash');
 const postSchema = require('./schema/post');
 const selectOneSchema = require('./schema/selectOne');
 const middleware = require('../../config/authMiddleware');
+const ErrorResponse = require('./../../core/errorResponse');
 
 module.exports = (app, driverRideRepository, driverRepository, rideRepository, validate) => {
   app.post('/api/driver-ride', middleware.isAdmin, async (req, res) => {
@@ -22,6 +23,21 @@ module.exports = (app, driverRideRepository, driverRepository, rideRepository, v
     const result = await driverRideRepository.insertOne({ drivers, place, timeframe });
 
     return res.status(201).send(result);
+  });
+
+  app.get('/api/driver-ride/place', middleware.isAuthorized, async (req, res, next) => {
+    try {
+      const placeId = parseInt(req.query.placeId);
+      if (!placeId) {
+        throw ErrorResponse.BadRequest('Provide placeId');
+      }
+
+      const driverRides = await driverRideRepository.findByPlaceId(placeId);
+
+      return res.status(200).json(driverRides);
+    } catch (error) {
+      return next(error);
+    }
   });
 
   app.get('/api/driver-ride', middleware.isDriverCaptain, async (req, res, next) => {
