@@ -78,7 +78,13 @@ async function bootstrap() {
   const newUserRepository = () => userRepository(User);
   const newOfferRepository = () => offerRepository(Offer);
   const newBookingRepository = () => bookingRepository(Booking, newPlaceRepository());
-  const newEventRepository = () => eventRepository(Event, client, newRequirementRepository(), newPlaceRepository());
+  const newEventRepository = () => eventRepository(
+    Event,
+    client,
+    newRequirementRepository(),
+    newPlaceRepository(),
+    newBookingUtil(),
+  );
   const newIntervalRepository = () => intervalRepository(Interval);
   const newPlaceTypeRepository = () => placeTypeRepository(PlaceType);
   const newPlaceExtraRepository = () => placeExtraRepository(PlaceExtra);
@@ -125,8 +131,6 @@ async function bootstrap() {
     newEventBookingRepository(),
     newDeleteEventBooking(),
   );
-
-  await User.updateOne({ _id: 295 }, { $set: { credits: 9999 }});
 
   addMiddlewares(app);
 

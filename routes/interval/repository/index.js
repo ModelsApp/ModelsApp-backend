@@ -3,6 +3,10 @@ const newIntervalRepository = (model) => ({
     return model.findOne({ _id: id });
   },
 
+  findById: (id) => {
+    return model.findOne({ _id: id });
+  },
+
   findOneWhere: (query) => {
     return model.findOne(query);
   },

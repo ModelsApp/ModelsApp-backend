@@ -16,10 +16,11 @@ const getObjectId = (id) => {
 }
 
 class EventRepository extends Repository {
-  constructor(model, client, requirementRepository, placeRepository) {
+  constructor(model, client, requirementRepository, placeRepository, bookUtil) {
     super(model, client);
     this.requirementRepository = requirementRepository;
     this.placeRepository = placeRepository;
+    this.bookUtil = bookUtil;
   }
 
   async insertOne ({ placeId, requirements, placesOffers, timeframe, baseCredits, level }) {
@@ -142,6 +143,48 @@ class EventRepository extends Repository {
       place: await this.placeRepository.findById(event.placeId),
     }
   }
+
+  async joinPlaceOffersPlace(placeOffer) {
+    const place = await this.placeRepository.findById(placeOffer.placeId);
+    let chosenInterval;
+    try {
+      const intervals = await this.bookUtil.getPlaceIntervals(placeOffer.placeId);
+      chosenInterval = intervals.find(x => x._id == placeOffer.intervalId);
+    } catch (error) {
+      chosenInterval = null;
+    }
+    let date;
+    if (chosenInterval && moment().format('dddd') !== chosenInterval.day) {
+      let day;
+      switch(chosenInterval.day) {
+        case 'Monday': day = 1;
+        case 'Tuesday': day = 2;
+        case 'Wednesday': day = 3;
+        case 'Thursday': day = 4;
+        case 'Friday': day = 5;
+        case 'Saturday': day = 6;
+        case 'Sunday': day = 7;
+      }
+      if (moment().day() <= day) { 
+        date = moment().isoWeekday(day);
+      } else {
+        date = moment().add(1, 'weeks').isoWeekday(day);
+      }
+    } else {
+      date = moment();
+    }
+    return {
+      ...placeOffer,
+      place: {
+        id: place._id,
+        name: place.name,
+        mainImage: place.mainImage,
+        address: place.address,
+        coordinates: (place.location || {}).coordinates,
+        ...(chosenInterval && { freeSpots: (await this.bookUtil.validateIntervalSlots(chosenInterval, date, place)).free }),
+      },
+    }
+  }
 }
 
 const newEventRepository = (
@@ -149,6 +192,7 @@ const newEventRepository = (
   client,
   requirementRepository,
   placeRepository,
-) => new EventRepository(model, client, requirementRepository, placeRepository);
+  bookUtil,
+) => new EventRepository(model, client, requirementRepository, placeRepository, bookUtil);
 
 module.exports = newEventRepository;

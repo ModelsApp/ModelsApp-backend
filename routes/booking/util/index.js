@@ -233,7 +233,6 @@ class BookingUtil {
   async validateIntervalSlots(chosenInterval, date, place) {
     let dayOff = null;
     if(place.daysOffs) dayOff = place.daysOffs.find(x=> x.date == date.format('DD-MM-YYYY'));
-
     if(chosenInterval.day == date.format('dddd')){
       if(dayOff && (dayOff.isWholeDay || dayOff.intervals.filter(x=>x.start == chosenInterval.start && x.end == chosenInterval.end).length > 0)){
         chosenInterval.free = 0;
