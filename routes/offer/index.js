@@ -27,27 +27,6 @@ db.getInstance(function (p_db) {
 
 module.exports = function(app, actionPointsRepository, userRepository, offerRepository, validate) {
 
-  /* Migrate offers, add isActive:true field to all */
-  /*
-  app.get('/api/offer/migrate', async (req, res) => {
-    await Offer.updateMany({}, { $set: { isActive: true } });
-    res.send(await Offer.find({}).toArray());
-  });
-  */
-
-  // app.get('/api/offer/migrate', function (req, res) {
-  //   OfferPost.deleteMany({_id: {$in: [12,13,38,39,40,41,42,43,44,45,46,47,48,49,50,51]}});
-  //   res.send('mutated');
-  // });
-
-  /* Migrate offers, add scopes field to all */
-  /*
-  app.get('/api/offer/migrate', async (req, res) => {
-    await Offer.updateMany({}, { $set: { scopes: ['regular'] } });
-    res.send(await Offer.find({}).toArray());
-  });
-  */
-
   // Offers section
   // ______________________________
 

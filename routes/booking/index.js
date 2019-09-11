@@ -23,64 +23,6 @@ module.exports = (app, placeRepository, userRepository, bookingRepository, event
 
   const bookingUtil = newBookingUtil(Place, User, Interval, Offer, Booking, placeUtil);
 
-  /* migrate Booking, add eventBooking field */
-  /*
-  app.get('/api/booking/migrate', async (req, res) => {
-    const a = await Booking.find({}).toArray();
-
-    const ps = await Promise.all(a.map(async (el) => {
-      await Booking.replaceOne({ _id: el._id }, { ...el, eventBooking: false });
-    }));
-
-    res.send(ps);
-  });
-  */
-
-
-  /* migrate creationDate on Booking locally */
-  /*
-  app.get('/api/booking/migrate', async (req, res) => {
-    const a = await Booking.find({}).toArray();
-
-    const ps = await Promise.all(a.map(async (el) => {
-      const parts = el.creationDate.split("-");
-      el.creationDate = moment(new Date(parts[2], parts[1] - 1, parts[0])).add({days:1}).subtract({hours:22}).toISOString();
-      await Booking.replaceOne({ _id: el._id }, el);
-    }));
-
-    res.send(ps);
-  });
-  */
-
-  /* migrate users subscriptions to unlimited */
-  /*
-  app.get('/api/booking/user/migrate', async (req, res) => {
-    const users = await User.find({}).toArray();
-
-    await Promise.all(users.map(async (user) => {
-      user.subscriptionPlan = { subscription: SUBSCRIPTION.unlimited };
-      const newUser = _.omit(user, ['plan']);
-      await User.replaceOne({ _id: user._id }, newUser);
-    }));
-
-    res.send('ok');
-  });
-  */
-
-  /* migrate places access to basic */
-  /*
-  app.get('/api/booking/place/migrate', async (req, res) => {
-    const places = await Place.find({}).toArray();
-
-    await Promise.all(places.map(async (place) => {
-      place.access = ACCESS.basic;
-      await Place.replaceOne({ _id: place._id }, place);
-    }));
-
-    res.send('ok');
-  });
-  */
-
   app.get('/api/place/:id/book/slots', async (req, res, next) => {
     try {
       const id = parseInt(req.params.id);

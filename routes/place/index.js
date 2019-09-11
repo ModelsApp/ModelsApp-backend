@@ -55,28 +55,6 @@ module.exports = (
       }
   });
 
-  /* migrate requirements field */
-  app.get('/api/place/migrate', async (req, res) => {
-    await Place.updateMany({ }, { $set: { requirements: {} } });
-    res.send('ok');
-  });  
-
-  /* migrate places allows field */
-  /*
-  app.get('/api/place/migrate', async (req, res) => {
-    await Place.updateMany({ }, { $set: { allows: ['male', 'female']} });
-    res.send('ok');
-  });
-  */
-
-  /* migrate city field, set all to Milan */
-  /*
-  app.get('/api/place/migrate', async (req, res) => {
-    await Place.updateMany({ }, { $set: { city: 'Milan' } });
-    res.send('ok');
-  });
-  */
-
   app.post('/api/place/notification', middleware.isAuthorized, async (req, res) => {
     const validation = validate(req.body, newPostNotificationSchema());
     if (validation.error) {

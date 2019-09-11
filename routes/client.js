@@ -16,15 +16,6 @@ db.getInstance(function (p_db) {
 
 module.exports = function(app) {
 
-  // app.get('/api/mutate', function (req, res) {
-  //   Booking.updateMany({date: '10-03-2019'}, {$set: {closed: false}});
-  //   res.send('mutated');
-  // });
-
-  // app.get('/api/test', function (req, res) {
-  //   res.send(bcrypt.hashSync("12345678", bcrypt.genSaltSync(8), null));
-  // });
-
   // Edit Place
   app.put('/api/client', middleware.isClient, function (req, res) {
     var id = req.user._id;
