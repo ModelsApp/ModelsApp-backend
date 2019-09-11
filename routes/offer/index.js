@@ -121,25 +121,17 @@ module.exports = function(app, actionPointsRepository, userRepository, offerRepo
           await Booking.findOne({ _id: bookingId })
             .then(async (booking) => {
               if (!booking) res.status(404).json({ message: "booking not found" });
-                const { offerActions } = booking;
-                //check if user arleady go to choose action for particular offer
-                const filteredOfferActions = offerActions.filter(offerAction => offerAction.offerId == offerId);
-                if (filteredOfferActions.length > 0) {
-                  res.status(200).json(filteredOfferActions[0].actions);
-                } else {
-                  //first apperence we need to create available actions
-                  const offerAction = {
-                    offerId: offerId,
-                    actions: await generateActions(offer, user.level),
-                  };
-                 await Booking.findOneAndUpdate({_id: bookingId}, { $push : { offerActions: offerAction }})
-                    .then(()=>{
-                    res.status(200).json(offerAction.actions);
-                  })
-                  .catch(err =>{
-                    res.status(500).json({ message: err });
-                  });
-                }
+                const offerAction = {
+                  offerId: offerId,
+                  actions: await generateActions(offer, user.level),
+                };
+                await Booking.findOneAndUpdate({_id: bookingId}, { $push : { offerActions: offerAction }})
+                  .then(()=>{
+                  res.status(200).json(offerAction.actions);
+                })
+                .catch(err =>{
+                  res.status(500).json({ message: err });
+                });
             })
             .catch(err => {
               res.status(404).json({ message: err.message });
