@@ -291,6 +291,7 @@ module.exports = (
   app.get('/api/place/:id', async (req, res, next) => {
     try {
       const id = parseInt(req.params.id);
+      const date = moment(req.query.date);
       let place = await Place.findOne({ _id: id, isActive : true }, { projection: { client: 0 }});
       if (!place) {
         return res.status(404).json({ message: 'No such place' });
@@ -312,6 +313,12 @@ module.exports = (
       if (event) {
         event = await eventRepository.joinRequirements(event);
         event = await eventRepository.joinPlace(event);
+        if (date) {
+          event.placesOffers = await Promise.all(
+            event.placesOffers.map(
+              (placeOffer) => eventRepository.joinPlaceOffersPlace(placeOffer, date)
+            ));
+        }
       }
       place = await placeRepository.joinRequirements(place);
   

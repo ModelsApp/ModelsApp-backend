@@ -16,10 +16,11 @@ const getObjectId = (id) => {
 }
 
 class EventRepository extends Repository {
-  constructor(model, client, requirementRepository, placeRepository) {
+  constructor(model, client, requirementRepository, placeRepository, bookUtil) {
     super(model, client);
     this.requirementRepository = requirementRepository;
     this.placeRepository = placeRepository;
+    this.bookUtil = bookUtil;
   }
 
   async insertOne ({ placeId, requirements, placesOffers, timeframe, baseCredits, level }) {
@@ -142,6 +143,28 @@ class EventRepository extends Repository {
       place: await this.placeRepository.findById(event.placeId),
     }
   }
+
+  async joinPlaceOffersPlace(placeOffer, date) {
+    const place = await this.placeRepository.findById(placeOffer.placeId);
+    let chosenInterval;
+    try {
+      const intervals = await this.bookUtil.getPlaceIntervals(placeOffer.placeId);
+      chosenInterval = intervals.find(x => x._id == placeOffer.intervalId);
+    } catch (error) {
+      chosenInterval = null;
+    }
+    return {
+      ...placeOffer,
+      place: {
+        id: place._id,
+        name: place.name,
+        mainImage: place.mainImage,
+        address: place.address,
+        coordinates: (place.location || {}).coordinates,
+        ...(chosenInterval && { freeSpots: (await this.bookUtil.validateIntervalSlots(chosenInterval, date, place)).free }),
+      },
+    }
+  }
 }
 
 const newEventRepository = (
@@ -149,6 +172,7 @@ const newEventRepository = (
   client,
   requirementRepository,
   placeRepository,
-) => new EventRepository(model, client, requirementRepository, placeRepository);
+  bookUtil,
+) => new EventRepository(model, client, requirementRepository, placeRepository, bookUtil);
 
 module.exports = newEventRepository;

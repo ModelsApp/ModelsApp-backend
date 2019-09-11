@@ -26,6 +26,11 @@ class BookingUtil {
   generateOfferPrices(offers, userLevel) {
     return offers.map(offer => ({ ...offer, price: calculateOfferPoints(userLevel, offer.level) }));
   }
+
+  async getPlaceIntervalsRaw(placeId) {
+    const intervals = await this.Interval.find({ place: placeId }).toArray();
+    return intervals;
+  }
   
   async getPlaceIntervals(placeId) {
     const interval = await this.Interval.findOne({ place: placeId });
@@ -233,7 +238,6 @@ class BookingUtil {
   async validateIntervalSlots(chosenInterval, date, place) {
     let dayOff = null;
     if(place.daysOffs) dayOff = place.daysOffs.find(x=> x.date == date.format('DD-MM-YYYY'));
-
     if(chosenInterval.day == date.format('dddd')){
       if(dayOff && (dayOff.isWholeDay || dayOff.intervals.filter(x=>x.start == chosenInterval.start && x.end == chosenInterval.end).length > 0)){
         chosenInterval.free = 0;
