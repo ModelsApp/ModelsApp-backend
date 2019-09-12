@@ -30,7 +30,7 @@ function intervalFuncCheckBookingExpired (db) {
                         bookings.forEach(booking => {
 
                             var date = moment(booking.date + ' ' + booking.endTime, 'DD-MM-YYYY HH.mm');
-                            var tommorow = moment(date.add('1', 'days').format('DD-MM-YYYY'), 'DD-MM-YYYY');
+                            var tommorow = moment(date.add('5', 'days').format('DD-MM-YYYY'), 'DD-MM-YYYY');
                             var diff = tommorow.diff(moment(), 'days');
                             if (diff < 0 && !booking.closed) {
                                 //update booking 
