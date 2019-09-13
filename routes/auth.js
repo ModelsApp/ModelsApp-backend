@@ -1,14 +1,7 @@
 var passport = require('passport');
-var db = require('../config/connection');
 var token = require('../config/generateToken');
 var isAuthorized = require('../config/authMiddleware').isAuthorized;
 var authEmail = require('../config/authEmail');
-
-var User;
-db.getInstance(function (p_db) {
-  User = p_db.collection('users');
-  Profile = p_db.collection('user_profile');
-});
 
 function generateUserToken(req, res) {
   var accessToken = token.generateAccessToken(req.user._id);
@@ -19,7 +12,7 @@ function generateUserToken(req, res) {
   }
 }
 
-module.exports = function (app) {
+module.exports = (app, User, Profile, entityHelper) => {
 
   // Instagram authentication
   app.get(
@@ -136,6 +129,6 @@ module.exports = function (app) {
       })(req, res, next);
   });
   
-   app.post('/api/auth/user/signin', authEmail.createUser);
-   app.post('/api/auth/user/login', authEmail.loginUser);
+   app.post('/api/auth/user/signin', authEmail.newCreateUser(entityHelper, User));
+   app.post('/api/auth/user/login', authEmail.newLoginUser(User));
 };

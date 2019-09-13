@@ -1,20 +1,9 @@
-var db = require('../config/connection');
 var middleware = require('../config/authMiddleware');
 var moment = require('moment');
 var sendgrid = require('../lib/sendGrid');
 var pushProvider = require('../lib/pushProvider');
 
-var User, Place, Offer, OfferPost, Booking;
-db.getInstance(function (p_db) {
-  User = p_db.collection('users');
-  Place = p_db.collection('places');
-  Offer = p_db.collection('offers');
-  OfferPost = p_db.collection('offerPosts');
-  Booking = p_db.collection('bookings');
-  OfferPostArchive = p_db.collection('offerPostArchive');
-});
-
-module.exports = function(app) {
+module.exports = (app, User, Place, Offer, OfferPost, Booking, OfferPostArchive) => {
 
   app.put(['/api/admin/model/:id/accept'], async function (req, res) {
     var id = parseInt(req.params.id);

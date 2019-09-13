@@ -1,31 +1,19 @@
 const _ = require('lodash');
 
-var db = require('../../config/connection');
 var middleware = require('../../config/authMiddleware');
 var moment = require('moment');
 var imageUplader = require('../../lib/imageUplader');
 var multiparty = require('multiparty');
 var pushProvider = require('../../lib/pushProvider');
 var dfs = require('obj-traverse/lib/obj-traverse');
-var entityHelper = require('../../lib/entityHelper');
 const calculateActionPoints = require('../actionPoints/calculator/action');
 const postOfferSchema = require('./schema/postOffer');
 const ErrorResponse = require('./../../core/errorResponse');
 const { OFFER_SCOPES } = require('./constant');
 
-let User, Place, Offer, Counter, Booking, OfferPost, Interval, SamplePost;
-db.getInstance(function (p_db) {
-  User = p_db.collection('users');
-  Place = p_db.collection('places');
-  Offer = p_db.collection('offers');
-  Counter = p_db.collection('counters');
-  Booking = p_db.collection('bookings');
-  OfferPost = p_db.collection('offerPosts');
-  Interval = p_db.collection('bookingIntervals');
-  SamplePost = p_db.collection('sampleposts');
-});
-
-module.exports = function(app, actionPointsRepository, userRepository, offerRepository, validate) {
+module.exports = (
+  app, actionPointsRepository, userRepository, offerRepository, validate,
+  User, Place, Offer, Counter, Booking, OfferPost, Interval, SamplePost, entityHelper) => {
 
   // Offers section
   // ______________________________

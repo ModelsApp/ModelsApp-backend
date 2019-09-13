@@ -2,11 +2,11 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const passport = require('passport');
-const config = require('./config/index');
 const app = express();
 const Sentry = require('@sentry/node');
+const config = require('./config/');
 
-const db = require('./config/connection');
+const Database = require('./config/database');
 const newValidator = require('./lib/validator');
 const ErrorResponse = require('./core/errorResponse');
 
@@ -35,41 +35,51 @@ const functions = require('./config/intervalFunctions');
 const placeUtil = require('./routes/place/util');
 const bookingUtil = require('./routes/booking/util');
 const pushProvider = require('./lib/pushProvider');
+const newEntityHelper = require('./lib/entityHelper');
 
 async function bootstrap() {
-  let client;
   Sentry.init({ dsn: config.sentryUrl });
-  await new Promise((resolve, reject) => db.initPool(() => resolve()));
+  const database = new Database(config);
+  const client = await database.getClient();
+  const db = await database.getDatabase();
  
-  let User, Place, Offer, Counter, Booking, PlaceTimeFrame, City, Driver,
-    OfferPost, Interval, SamplePost, ActionPoints, PlaceType, PlaceExtra,
-    Event, DriverRide, EventBooking, Ride, Requirement;
-  await new Promise((resolve) => {
-    db.getInstance((p_db, c) => {
-      User = p_db.collection('users');
-      Place = p_db.collection('places');
-      Offer = p_db.collection('offers');
-      Counter = p_db.collection('counters');
-      Booking = p_db.collection('bookings');
-      OfferPost = p_db.collection('offerPosts');
-      Interval = p_db.collection('bookingIntervals');
-      SamplePost = p_db.collection('sampleposts');
-      ActionPoints = p_db.collection('actionPoints');
-      PlaceType = p_db.collection('placeTypes');
-      PlaceExtra = p_db.collection('placeExtras');
-      PlaceTimeFrame = p_db.collection('placeTimeFrame');
-      City = p_db.collection('cities');
-      Driver = p_db.collection('drivers');
-      Event = p_db.collection('events');
-      DriverRide = p_db.collection('driverRides');
-      EventBooking = p_db.collection('eventBookings');
-      Ride = p_db.collection('rides');
-      Requirement = p_db.collection('requirements');
+  const User = db.collection('users');
+  const Place = db.collection('places');
+  const Offer = db.collection('offers');
+  const Counter = db.collection('counters');
+  const Booking = db.collection('bookings');
+  const OfferPost = db.collection('offerPosts');
+  const Interval = db.collection('bookingIntervals');
+  const SamplePost = db.collection('sampleposts');
+  const ActionPoints = db.collection('actionPoints');
+  const PlaceType = db.collection('placeTypes');
+  const PlaceExtra = db.collection('placeExtras');
+  const PlaceTimeFrame = db.collection('placeTimeFrame');
+  const City = db.collection('cities');
+  const Driver = db.collection('drivers');
+  const Event = db.collection('events');
+  const DriverRide = db.collection('driverRides');
+  const EventBooking = db.collection('eventBookings');
+  const Ride = db.collection('rides');
+  const Requirement = db.collection('requirements');
+  const Profile = db.collection('user_profile');
+  const OfferPostArchive = db.collection('offerPostArchive');
+  const UserPaymentToken = db.collection('userPaymentTokens');
+  const Campaign = db.collection('campaigns');
+  const UserCampaign = db.collection('userCampaigns');
+  const CampaignInterval = db.collection("campaignIntervals");
 
-      client = c;
-      resolve();
-    });
-  });
+  const entityHelper = newEntityHelper(Counter);
+
+  const newBookingUtil = () => bookingUtil(
+    Place,
+    User,
+    Interval,
+    Offer,
+    Booking,
+    newPlaceUtil(),
+    entityHelper,
+  );
 
   const newRequirementRepository = () => requirementRepository(Requirement);
   const newPlaceRepository = () => placeRepository(Place, newRequirementRepository());
@@ -106,14 +116,6 @@ async function bootstrap() {
     newPlaceTypeRepository(),
     newPlaceExtraRepository(),
   );
-  const newBookingUtil = () => bookingUtil(
-    Place,
-    User,
-    Interval,
-    Offer,
-    Booking,
-    newPlaceUtil(),
-  );
   const newDeleteRide = () => deleteRide(
     newRideRepository(),
     newDriverRideRepository(),
@@ -134,22 +136,23 @@ async function bootstrap() {
 
   addMiddlewares(app);
 
-  require('./config/authJWT')(passport);
-  require('./config/authLocal')(passport);
-  require('./config/authInstagram')(passport);
-  require('./config/authGoogle')(passport);
-  require('./config/authFacebook')(passport);
+  require('./config/authJWT')(passport, User, Place);
+  require('./config/authLocal')(passport, Place, Counter, User, Interval, entityHelper);
+  require('./config/authInstagram')(passport, User, Counter);
+  require('./config/authGoogle')(passport, User);
+  require('./config/authFacebook')(passport, User);
 
-  require('./routes/auth')(app);
-  require('./routes/user')(app, newValidator());
-  require('./routes/admins')(app);
-  require('./routes/client')(app);
+  require('./routes/auth')(app, User, Profile, entityHelper);
+  require('./routes/user')(app, newValidator(), User, Offer, Booking, Place, OfferPost, UserPaymentToken, entityHelper);
+  require('./routes/admins')(app, User, Place, Offer, OfferPost, Booking, OfferPostArchive);
+  require('./routes/client')(app, User, Place, Offer, Counter, Booking, OfferPost, Interval, SamplePost);
   require('./routes/offer')(
     app,
     newActionPointsRepository(),
     newUserRepository(),
     newOfferRepository(),
     newValidator(),
+    User, Place, Offer, Counter, Booking, OfferPost, Interval, SamplePost, entityHelper,
   );
   require('./routes/booking')(
     app,
@@ -159,8 +162,9 @@ async function bootstrap() {
     newEventBookingRepository(),
     newEventRepository(),
     newPlaceUtil(),
+    User, Place, Offer, Counter, Booking, OfferPost, Interval, SamplePost,
   );
-  require('./routes/interval')(app);
+  require('./routes/interval')(app, User, Place, Offer, Counter, Booking, OfferPost, Interval, SamplePost);
   require('./routes/place')(app,
     newPlaceRepository(),
     newPlaceTypeRepository(),
@@ -172,15 +176,16 @@ async function bootstrap() {
     newDeleteEvent(),
     newPlaceUtil(),
     newValidator(),
+    User, Place, Offer, Counter, Booking, OfferPost, Interval, SamplePost, entityHelper,
   );
-  require('./routes/statistics')(app);
-  require('./routes')(app);
+  require('./routes/statistics')(app, User, Place, Offer, Counter, Booking, OfferPost, Interval);
+  require('./routes')(app, User, Place, Offer, Counter, Booking, OfferPost);
   require('./Views/htmlViews')(app);
-  require('./routes/samplePost')(app);
-  require('./routes/campains/campaigns')(app);
-  require('./routes/campains/userCampaigns')(app);
-  require('./routes/campains/campaignsIntervals')(app);
-  require('./routes/config')(app);
+  require('./routes/samplePost')(app, Place, SamplePost, entityHelper);
+  require('./routes/campains/campaigns')(app, User, Campaign, UserCampaign, CampaignInterval, entityHelper);
+  require('./routes/campains/userCampaigns')(app, Campaign, UserCampaign, User, entityHelper);
+  require('./routes/campains/campaignsIntervals')(app, Campaign, CampaignInterval, UserCampaign, entityHelper);
+  require('./routes/config')(app, Offer);
   require('./routes/actionPoints')(app, newActionPointsRepository(), newValidator());
   require('./routes/placeType')(app, newPlaceTypeRepository(), newValidator());
   require('./routes/placeExtra')(

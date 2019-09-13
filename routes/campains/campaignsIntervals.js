@@ -1,22 +1,13 @@
-var db = require('../../config/connection');
 let campaignIntervalSchema = require('../../model/campaign/campaignIntervalSchema');
 let viewModels = require('../../model/campaign/campaignViewModel');
 let moment = require('moment');
-let entityHelper = require('../../lib/entityHelper');
 let imageUplader = require('../../lib/imageUplader');
 let multiparty = require('multiparty');
 let middleware = require('../../config/authMiddleware');
 let pushProvider = require('../../lib/pushProvider');
 let crypto = require('crypto');
 
-let Campaign, CampaignInterval, UserCampaign;
-db.getInstance(function (p_db) {
-  Campaign = p_db.collection('campaigns');
-  CampaignInterval = p_db.collection("campaignIntervals");
-  UserCampaign = p_db.collection('userCampaigns');
-});
-
-module.exports = function(app) {
+module.exports = (app, Campaign, CampaignInterval, UserCampaign, entityHelper) => {
 
     app.post('/api/admin/campaign/:id/interval', async (req, res) => {
         let interval = req.body;

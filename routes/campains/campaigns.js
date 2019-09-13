@@ -1,22 +1,12 @@
-let db = require('../../config/connection');
 let campaignSchema = require('../../model/campaign/campaignSchema');
 let viewModels = require('../../model/campaign/campaignViewModel');
 let moment = require('moment');
-let entityHelper = require('../../lib/entityHelper');
 let imageUplader = require('../../lib/imageUplader');
 let multiparty = require('multiparty');
 let middleware = require('../../config/authMiddleware');
 let crypto = require('crypto');
 
-let Campaign, UserCampaign, User, CampaignInterval;
-db.getInstance(function (p_db) {
-  User = p_db.collection('users');
-  Campaign = p_db.collection('campaigns');
-  UserCampaign = p_db.collection('userCampaigns');
-  CampaignInterval = p_db.collection("campaignIntervals");
-});
-
-module.exports = function(app) {
+module.exports = (app, User, Campaign, UserCampaign, CampaignInterval, entityHelper) => {
   //create new campaing
   app.post('/api/admin/campaign', async (req, res) => {
     let campaign =  req.body;

@@ -1,20 +1,10 @@
 var Strategy = require('passport-local').Strategy;
-var db = require('./connection');
 var bcrypt = require('bcrypt-nodejs');
 var moment = require('moment');
 var pushProvider = require('../lib/pushProvider');
-var entityHelper = require('../lib/entityHelper');
 const { SUBSCRIPTION } = require('./constant');
 
-var Counter, Place;
-db.getInstance(function (p_db) {
-  Place = p_db.collection('places');
-  Counter = p_db.collection('counters');
-  User = p_db.collection('user');
-  Interval = p_db.collection('bookingIntervals');
-});
-
-module.exports = function (passport) {
+module.exports = (passport, Place, Counter, User, Interval, entityHelper) => {
   passport.use('local-signup', new Strategy({
     usernameField: 'email',
     passwordField: 'password',

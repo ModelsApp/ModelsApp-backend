@@ -1,17 +1,9 @@
 var Strategy = require('passport-instagram').Strategy;
 var config = require('./index');
-var db = require('./connection');
 var crypto = require('crypto');
 const { SUBSCRIPTION } = require('./constant');
 
-var User;
-var Counter;
-db.getInstance(function(p_db) {
-  User = p_db.collection('users');
-  Counter = p_db.collection('counters');
-});
-
-module.exports = function(passport) {
+module.exports = (passport, User, Counter) => {
 
   passport.use(
     new Strategy(

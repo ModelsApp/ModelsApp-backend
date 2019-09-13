@@ -2,24 +2,12 @@ const _ = require('lodash');
 const moment = require('moment');
 const crypto = require('crypto');
 
-const db = require('../../config/connection');
 const newBookingUtil = require('./util');
 const middleware = require('./../../config/authMiddleware');
 const ErrorResponse = require('./../../core/errorResponse');
 
-let User, Place, Offer, Counter, Booking, OfferPost, Interval, SamplePost;
-db.getInstance(function (p_db) {
-  User = p_db.collection('users');
-  Place = p_db.collection('places');
-  Offer = p_db.collection('offers');
-  Counter = p_db.collection('counters');
-  Booking = p_db.collection('bookings');
-  OfferPost = p_db.collection('offerPosts');
-  Interval = p_db.collection('bookingIntervals');
-  SamplePost = p_db.collection('sampleposts');
-});
-
-module.exports = (app, placeRepository, userRepository, bookingRepository, eventBookingRepository, eventRepository, placeUtil) => {
+module.exports = (app, placeRepository, userRepository, bookingRepository, eventBookingRepository, eventRepository, placeUtil,
+  User, Place, Offer, Counter, Booking, OfferPost, Interval, SamplePost) => {
 
   const bookingUtil = newBookingUtil(Place, User, Interval, Offer, Booking, placeUtil);
 

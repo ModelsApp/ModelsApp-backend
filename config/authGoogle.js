@@ -1,13 +1,7 @@
 var GoogleStrategy = require('passport-google-oauth20').Strategy;
 var config = require('./index');
-var db = require('./connection');
 
-var User;
-db.getInstance(function(p_db) {
-  User = p_db.collection('users');
-});
-
-module.exports = function(passport) {
+module.exports = (passport, User) => {
 
   // Google connecting to account, only if the user is authenticated
   passport.use(new GoogleStrategy({

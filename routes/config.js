@@ -1,19 +1,6 @@
-var db = require('../config/connection');
 var crypto = require('crypto');
 
-var User, Place, Offer, Counter, Booking, OfferPost, Interval, SamplePost;
-db.getInstance(function (p_db) {
-  User = p_db.collection('users');
-  Place = p_db.collection('places');
-  Offer = p_db.collection('offers');
-  Counter = p_db.collection('counters');
-  Booking = p_db.collection('bookings');
-  OfferPost = p_db.collection('offerPosts');
-  Interval = p_db.collection('bookingIntervals');
-  SamplePost = p_db.collection('sampleposts');
-});
-
-module.exports = function(app) {
+module.exports = (app, Offer) => {
 
     app.post('/api/config/rewriteoffers', async (req, res) => {
         let allOffers = await Offer.find({}).toArray();

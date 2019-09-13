@@ -1,4 +1,3 @@
-var db = require('../../config/connection');
 var middleware = require('../../config/authMiddleware');
 var apn = require('apn');
 var moment = require('moment');
@@ -9,24 +8,13 @@ var imageUplader = require('../../lib/imageUplader');
 var multiparty = require('multiparty');
 var pushProvider = require('../../lib/pushProvider');
 var path = require('path');
-var entityHelper = require('../../lib/entityHelper');
 const newPostSubscriptionSchema = require('./schema/postSubscription');
 const newEditUserSchema = require('./schema/editUser');
 const newEditUserAdminSchema = require('./schema/editUserAdmin');
 const { SUBSCRIPTION } = require('./../../config/constant');
 const ErrorResponse = require('./../../core/errorResponse');
 
-var User, Booking, Offer, Place, OfferPost, UserPaymentToken;
-db.getInstance(function (p_db) {
-  User = p_db.collection('users');
-  Offer = p_db.collection('offers');
-  Booking = p_db.collection('bookings');
-  Place = p_db.collection('places');
-  OfferPost = p_db.collection('offerPosts');
-  UserPaymentToken = p_db.collection('userPaymentTokens');
-});
-
-module.exports = (app, validate) => {
+module.exports = (app, validate, User, Offer, Booking, Place, OfferPost, UserPaymentToken, entityHelper) => {
 
   // Get the current (authenticated) User
   app.get('/api/user/current', middleware.isAuthorized, async function (req, res) {

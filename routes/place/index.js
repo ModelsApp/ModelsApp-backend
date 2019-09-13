@@ -2,10 +2,8 @@ const _ = require('lodash');
 const moment = require('moment');
 const multiparty = require('multiparty');
 
-const db = require('../../config/connection');
 const middleware = require('../../config/authMiddleware');
 const imageUplader = require('../../lib/imageUplader');
-const entityHelper = require('../../lib/entityHelper');
 const newPostPlaceSchema = require('./schema/postPlace');
 const newEditPlaceSchema = require('./schema/editPlace');
 const deleteNotificationReceiverSchema = require('./schema/deleteNotificationReceiver');
@@ -15,18 +13,6 @@ const ErrorResponse = require('./../../core/errorResponse');
 const { ACCESS } = require('./constant');
 const { GENDERS } = require('./../user/constant');
 const { BOOKING_LIMIT_PERIODS } = require('./constant');
-
-let User, Place, Offer, Counter, Booking, OfferPost, Interval, SamplePost;
-db.getInstance(function (p_db) {
-  User = p_db.collection('users');
-  Place = p_db.collection('places');
-  Offer = p_db.collection('offers');
-  Counter = p_db.collection('counters');
-  Booking = p_db.collection('bookings');
-  OfferPost = p_db.collection('offerPosts');
-  Interval = p_db.collection('bookingIntervals');
-  SamplePost = p_db.collection('sampleposts');
-});
 
 module.exports = (
   app,
@@ -40,6 +26,7 @@ module.exports = (
   deleteEvent,
   placeUtil,
   validate,
+  User, Place, Offer, Counter, Booking, OfferPost, Interval, SamplePost, entityHelper,
 ) => {
   app.get('/api/place/:id/daysOffs', async (req, res) => {
     var id = parseInt(req.params.id);

@@ -1,18 +1,9 @@
-var db = require('../../config/connection');
 let viewModels = require('../../model/campaign/campaignViewModel');
 let moment = require('moment');
-let entityHelper = require('../../lib/entityHelper');
 let imageUplader = require('../../lib/imageUplader');
 let multiparty = require('multiparty');
 let middleware = require('../../config/authMiddleware');
 let pushProvider = require('../../lib/pushProvider');
-
-let Campaign, UserCampaign, User;
-db.getInstance(function (p_db) {
-  Campaign = p_db.collection('campaigns');
-  UserCampaign = p_db.collection('userCampaigns');
-  User = p_db.collection('users');
-});
 
 //userCampaig statuses
 //0 - waiting for confirmation
@@ -23,7 +14,7 @@ db.getInstance(function (p_db) {
 //4 - photo approved
 //-2 - photo rejected
 
-module.exports = function(app) {
+module.exports = (app, Campaign, UserCampaign, User, entityHelper) => {
   
     app.post('/api/campaign', middleware.isAuthorized,  async (req, res) => {
       let qrCode = req.body.qrCode;

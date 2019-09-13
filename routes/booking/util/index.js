@@ -2,7 +2,6 @@ const crypto = require('crypto');
 const moment = require('moment');
 
 const sendGrid = require('../../../lib/sendGrid');
-const entityHelper = require('../../../lib/entityHelper');
 const { SUBSCRIPTION, SUBSCRIPTION_BOOKING_LIMITS } = require('../../../config/constant');
 const calculateOfferPoints = require('../../actionPoints/calculator/offer');
 const { ACCESS, BOOKING_LIMIT_PERIODS } = require('../../place/constant');
@@ -10,13 +9,14 @@ const ErrorResponse = require('./../../../core/errorResponse');
 const pushProvider = require('../../../lib/pushProvider');
 
 class BookingUtil {
-  constructor(Place, User, Interval, Offer, Booking, placeUtil) {
+  constructor(Place, User, Interval, Offer, Booking, placeUtil, entityHelper) {
     this.Place = Place;
     this.User = User;
     this.Interval = Interval;
     this.Offer = Offer;
     this.Booking = Booking;
     this.placeUtil = placeUtil;
+    this.entityHelper = entityHelper;
   }
 
   placeAllowsUserGender(place, user) {
@@ -101,7 +101,7 @@ class BookingUtil {
       throw ErrorResponse.Unauthorized('Cannot book inactive place');
     }
     const newBooking = {
-      _id: await entityHelper.getNewId('bookingid'),
+      _id: await this.entityHelper.getNewId('bookingid'),
       user: userID,
       place: id,
       date: moment(fullDate).format('DD-MM-YYYY'),

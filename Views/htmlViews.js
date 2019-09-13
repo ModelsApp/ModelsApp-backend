@@ -1,14 +1,8 @@
-var db = require('../config/connection');
 var fs = require('fs');
 var path = require('path');
 var http = require('http');
 
-var User;
-db.getInstance(function (p_db) {
-  User = p_db.collection('users');
-});
-
-module.exports = function (app) {
+module.exports = (app) => {
     app.get('/accept', async (req, res) => {
         var filePath = path.join(__dirname, '../htmlTemplates/userAccepted.html')
         res.sendFile(filePath);

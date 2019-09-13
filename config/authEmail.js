@@ -1,18 +1,13 @@
-var db = require('./connection');
 var bcrypt = require('bcrypt-nodejs');
-var entityHelper = require('../lib/entityHelper');
 var token = require('../config/generateToken');
 var crypto = require('crypto');
 var sendGrid = require('../lib/sendGrid');
 const { SUBSCRIPTION } = require('./constant');
 
-var User;
-db.getInstance(function(p_db) {
-  User = p_db.collection('users');
-});
 var exports = module.exports = {};
 
-exports.createUser = async (req, res, next) => {
+exports.newCreateUser = (entityHelper, User) => async (req, res, next) => {
+    console.log(req, res, next)
     var email = req.body.email;
     var password = req.body.password;
     var confirmPassword = req.body.confirmPassword;
@@ -91,7 +86,7 @@ exports.createUser = async (req, res, next) => {
     }
 };
 
-exports.loginUser = async (req, res, next) => {
+exports.newLoginUser = (User) => async (req, res, next) => {
     var email = req.body.email;
     var password = req.body.password;
     const emailRegexp = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
