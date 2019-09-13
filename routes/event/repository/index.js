@@ -176,7 +176,7 @@ class EventRepository extends Repository {
     return {
       ...placeOffer,
       place: {
-        id: place._id,
+        _id: place._id,
         name: place.name,
         mainImage: place.mainImage,
         address: place.address,

@@ -311,7 +311,6 @@ module.exports = (
       let event = await eventRepository.findActivePlaceEvent(place._id);
       if (event) {
         event = await eventRepository.joinRequirements(event);
-        event = await eventRepository.joinPlace(event);
         event.placesOffers = await Promise.all(
           event.placesOffers.map(
             (placeOffer) => eventRepository.joinPlaceOffersPlace(placeOffer)
