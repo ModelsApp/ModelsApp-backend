@@ -1,160 +1,186 @@
-var middleware = require('../../config/authMiddleware');
-var apn = require('apn');
-var moment = require('moment');
-var crypto = require('crypto');
-var sendGrid = require('../../lib/sendGrid');
-var bcrypt = require('bcrypt-nodejs');
-var imageUplader = require('../../lib/imageUplader');
-var multiparty = require('multiparty');
-var pushProvider = require('../../lib/pushProvider');
-var path = require('path');
+const path = require('path');
+const moment = require('moment');
+const crypto = require('crypto');
+const bcrypt = require('bcrypt-nodejs');
+const multiparty = require('multiparty');
+
+const middleware = require('../../config/authMiddleware');
+const sendGrid = require('../../lib/sendGrid');
+const imageUplader = require('../../lib/imageUplader');
+const pushProvider = require('../../lib/pushProvider');
 const newPostSubscriptionSchema = require('./schema/postSubscription');
 const newEditUserSchema = require('./schema/editUser');
 const newEditUserAdminSchema = require('./schema/editUserAdmin');
-const { SUBSCRIPTION } = require('./../../config/constant');
 const ErrorResponse = require('./../../core/errorResponse');
+const { SUBSCRIPTION } = require('./../../config/constant');
 
 module.exports = (app, validate, User, Offer, Booking, Place, OfferPost, UserPaymentToken, entityHelper) => {
 
   // Get the current (authenticated) User
-  app.get('/api/user/current', middleware.isAuthorized, async function (req, res) {
-    var user = await req.user;
-    res.json(user);
-  });
-  app.post('/api/user/paymentToken', middleware.isAuthorized, async function(req, res){
-    let id = req.body.id;
-    let token = req.body.token;
-    let user = await req.user;
-    if(id && token && user){
-      let userPaymentToken = {
-        _id: await entityHelper.getNewId('userPaymentTokenId'),
-        id: id,
-        token: token,
-        userId: user._id
-      }
-      await UserPaymentToken.insertOne(userPaymentToken);
-      res.status(200).json(await getPaymentTokens(user._id));
-    }else{
-      res.status(400).json({message: "invalid parameters"});
+  app.get('/api/user/current', middleware.isAuthorized, async (req, res, next) => {
+    try {
+      const user = await req.user;
+      return res.status(200).json(user);
+    } catch (error) {
+      return next(error);
     }
   });
+
+  app.post('/api/user/paymentToken', middleware.isAuthorized, async (req, res, next) => {
+    try {
+      const { id, token } = req.body;
+      const user = await req.user;
+      if (id && token && user) {
+        const userPaymentToken = {
+          _id: await entityHelper.getNewId('userPaymentTokenId'),
+          id,
+          token,
+          userId: user._id
+        }
+        await UserPaymentToken.insertOne(userPaymentToken);
+        return res.status(200).json(await getPaymentTokens(user._id));
+      } else {
+        throw ErrorResponse.BadRequest('invalid parameters');
+      }
+    } catch (error) {
+      return next(error);
+    }
+  });
+
   getPaymentTokens = async (userId) => {
-    let tokens =  await UserPaymentToken.find({userId: userId }).toArray();
-    return tokens.map(x=> {
-      delete x._id;
-      delete x.userId;
-      return x;
+    const tokens = await UserPaymentToken.find({ userId }).toArray();
+
+    return tokens.map(token => {
+      delete token._id;
+      delete token.userId;
+      return token;
     });
   }
-  app.get('/api/user/paymentToken', middleware.isAuthorized, async function(req, res){
-    let user =  await req.user;
-    if(user){
-      res.status(200).json(await getPaymentTokens(user._id));
-    }else{
-      res.status(400).json({message: "invalid parameters"});
+
+  app.get('/api/user/paymentToken', middleware.isAuthorized, async (req, res, next) => {
+    try {
+      const user = await req.user;
+
+      return res.status(200).json(await getPaymentTokens(user._id));
+    } catch (error) {
+      return next(error);
     }
   });
-  app.get('/api/user/paymentStatus', middleware.isAuthorized, async function(req, res){
-    let user =  await req.user;
-    if(user){
-      res.status(200).json({ isPaymentRequired: user.isPaymentRequired });
-    }else{
-      res.status(400).json({message: "invalid parameters"});
+
+  app.get('/api/user/paymentStatus', middleware.isAuthorized, async (req, res, next) => {
+    try {
+      const user = await req.user;
+
+      return res.status(200).json({ isPaymentRequired: user.isPaymentRequired });
+    } catch (error) {
+      return next(error);
     }
   });
-  app.put('/api/user/paymentStatus', middleware.isAuthorized, async function(req, res){
-    let user =  await req.user;
-    let isPaymentRequired = req.body.isPaymentRequired;
-    if(user){
-      await User.findOneAndUpdate({_id: user._id, $set: { isPaymentRequired: isPaymentRequired }});
-      res.status(200).json({message: 'ok'});
-    }else{
-      res.status(400).json({message: "invalid parameters"});
+
+  app.put('/api/user/paymentStatus', middleware.isAuthorized, async (req, res, next) => {
+    try {
+      const user = await req.user;
+      const { isPaymentRequired } = req.body;
+      await User.findOneAndUpdate({ _id: user._id }, { $set: { isPaymentRequired } });
+  
+      return res.status(200).json({ message: 'ok' });
+    } catch (error) {
+      return next(error);
     }
   });
+
   // Get specific user
-  app.get('/api/user/:id', function (req, res) {
-    var id = parseInt(req.params.id);
-    User.findOne({ _id: id }, function (err, user) {
-      if(!user) {
-        res.json({ message: "No such user" });
-      } else {
-        res.json(user);
+  app.get('/api/user/:id', async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      const user = await User.findOne({ _id: id });
+  
+      if (!user) {
+        return res.status(404).json({ message: 'No such user' });
       }
-    });
+  
+      return res.status(200).json(user);
+    } catch (error) {
+      return next(error);
+    }
   });
   
   // Get Users by specific query
-  app.get('/api/user', function (req, res) {
-    var query = {};
-    if(req.body.id) query._id = parseInt(req.body.id);
-    if(req.body.name) query.name = req.body.name;
-
-    User.find(query).toArray(function (err, users) {
-      if(err) console.log(err);
-      if(users.length === 0){
-        res.json({ message: "No users found" });
-      } else{
-        res.json(users);
+  app.get('/api/user', async (req, res, next) => {
+    try {
+      const query = {};
+      if(req.body.id) query._id = parseInt(req.body.id);
+      if(req.body.name) query.name = req.body.name;
+  
+      const users = await User.find(query).toArray();
+      if (!users.length) {
+        return res.status(404).json({ message: "No users found" });
       }
-    });
+
+      return res.status(200).json(users);
+    } catch (error) {
+      return next(error);
+    }
   });
 
   // Delete specific User
   // not handle flag anywhere in system
-  app.delete('/api/user/:id', function (req, res) {
-    User.findOneAndUpdate({ _id: parseInt(req.params.id)}, { $set: {deleted: true } }, function (err, user) {
-      if(err) res.json({ message: err });
-      if(!user){
-        res.json({ message: "No such user" })
-      } else {
-        // User.deleteOne({ _id: parseInt(req.params.id) }, function(err, user){
-        //   res.json({ message: "Deleted" });
-        // });
-        res.json({message: "user deleted"});
+  app.delete('/api/user/:id', async (req, res, next) => {
+    try {
+      const user = await User.findOneAndUpdate({ _id: parseInt(req.params.id) }, { $set: { deleted: true } });
+      if (!user) {
+        return res.status(404).json('No such user');
       }
-    });
+      return res.status(200).json({ message: 'user deleted' }); 
+    } catch (error) {
+      return next(error);
+    }
   });
 
   // Add a subscription to the user
-  app.put('/api/user/subscription', middleware.isAuthorized, async (req, res) => {
-    const validation = validate(req.body, newPostSubscriptionSchema());
-    if (validation.error) {
-      return res.status(400).json({ message: validation.error });
-    }
-
-    const { userId, subscription, months } = req.body;
-    let subscriptionPlan;
-    if (subscription === SUBSCRIPTION.trial || subscription === SUBSCRIPTION.unlimited) {
-      subscriptionPlan = {
-        subscription,
-      };
-    } else {
-      subscriptionPlan = {
-        subscription,
-        paidAt: moment().toISOString(),
-        dueTo: moment().add(months, 'M').toISOString(),
-      };
-    }
-
+  app.put('/api/user/subscription', middleware.isAuthorized, async (req, res, next) => {
     try {
-      await User.findOneAndUpdate({ _id: userId }, { $set: { subscriptionPlan } });
+      const user = await req.user;
+      const validation = validate(req.body, newPostSubscriptionSchema());
+      if (validation.error) {
+        throw ErrorResponse.BadRequest(validation.error);
+      }
+  
+      const { subscription, months } = req.body;
+      let subscriptionPlan;
+      if (subscription === SUBSCRIPTION.trial || subscription === SUBSCRIPTION.unlimited) {
+        subscriptionPlan = {
+          subscription,
+        };
+      } else {
+        subscriptionPlan = {
+          subscription,
+          paidAt: moment().toISOString(),
+          dueTo: moment().add(months, 'M').toISOString(),
+        };
+      }
+  
+      await User.findOneAndUpdate({ _id: user._id }, { $set: { subscriptionPlan } });
       return res.status(200).json(subscriptionPlan);
-    } catch (err) {
-      return res.status(500).json({ message: 'Internal server error' });
+    } catch (error) {
+      return next(error);
     }
   });
 
   // Edit Current (authenticated) User
-  app.put('/api/user/current', middleware.isAuthorized, async (req, res) => {
-    const newUser = req.body;
-    const validation = validate(newUser, newEditUserSchema());
-    if (validation.error) {
-      return res.status(400).json({ message: validation.error });
+  app.put('/api/user/current', middleware.isAuthorized, async (req, res, next) => {
+    try {
+      const newUser = req.body;
+      const validation = validate(newUser, newEditUserSchema());
+      if (validation.error) {
+        throw ErrorResponse.BadRequest(validation.error);
+      }
+      const user1 = await req.user;
+  
+      editUser(parseInt(user1._id), newUser, res);
+    } catch (error) {
+      return next(error);
     }
-    const user1 = await req.user;
-
-    editUser(parseInt(user1._id), newUser, res);
   });
 
   app.put('/api/admin/user', middleware.isAdmin, async (req, res, next) => {
@@ -172,228 +198,259 @@ module.exports = (app, validate, User, Offer, Booking, Place, OfferPost, UserPay
   });
 
   // Edit specific User
-  app.put('/api/user/:id', function (req, res) {
-    const id = parseInt(req.params.id);
-    const newUser = req.body;
-    const validation = validate(newUser, newEditUserSchema());
-    if (validation.error) {
-      return res.status(400).json({ message: validation.error });
+  app.put('/api/user/:id', (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      const newUser = req.body;
+      const validation = validate(newUser, newEditUserSchema());
+      if (validation.error) {
+        throw ErrorResponse.BadRequest(validation.error);
+      }
+  
+      editUser(id, newUser, res);
+    } catch (error) {
+      return next(error);
     }
-
-    editUser(id, newUser, res);
   });
 
-  app.put('/api/user/:id/device', async (req,res) => {
-    let id = parseInt(req.params.id);
-    let uid = req.body.uid;
-    let newToken = req.body.newToken;
-    let oldToken = req.body.oldToken;
-    if(id){
-      let user = await User.findOne({ _id: id });
-      if(user && user.devices){
-        let foundDevices  = user.devices.filter(x => {
-          if((typeof x === Object || typeof x == 'object') && x.type.toLowerCase() == 'android' && x.uid == uid) return true;
-          else return false;
-        });
-        //new device that was not use before
-        if(foundDevices.length == 0){
-        let newDevice = {
-            type: 'android',
-            uid: uid,
-            token: newToken,
-            changedAt: moment().format('YYYY-MM-DD HH:mm:ss')
-           };
-        await User.findOneAndUpdate({_id: user._id}, { $push :{ devices : newDevice } } )
-        }else{
-          await User.findOneAndUpdate({_id: user._id}, 
-            { $set :{ 'devices.$[t].token' : newToken, 'devices.$[t].changedAt': moment().format('YYYY-MM-DD HH:mm:ss') } },
-            { arrayFilters: [ {"t.uid": uid , "t.token": oldToken } ]} );
-        }
-      res.status(200).json({message: "ok"});
-      }else{
-        res.status(404).json({message:  "user not found"});
+  app.put('/api/user/:id/device', async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { uid, newToken, oldToken } = req.body;
+      if (!id) {
+        throw ErrorResponse.BadRequest('provide valid id');
       }
-    }else{
-      res.status(400).json({message:  "invalid parameters"});
+      const user = await User.findOne({ _id: id });
+      if (!user || !user.devices) {
+        throw ErrorResponse.NotFound('user not found');
+      }
+      const foundDevices = user.devices.filter(x => {
+        if ((typeof x === Object || typeof x == 'object') && x.type.toLowerCase() == 'android' && x.uid == uid) return true;
+        return false;
+      });
+      //new device that was not use before
+      if (!foundDevices.length) {
+        const newDevice = {
+          type: 'android',
+          uid: uid,
+          token: newToken,
+          changedAt: moment().format('YYYY-MM-DD HH:mm:ss'),
+        };
+        await User.findOneAndUpdate({ _id: user._id }, { $push: { devices: newDevice } } );
+      } else {
+        await User.findOneAndUpdate({ _id: user._id }, 
+          { $set: { 'devices.$[t].token': newToken, 'devices.$[t].changedAt': moment().format('YYYY-MM-DD HH:mm:ss') } },
+          { arrayFilters: [ { 't.uid': uid , 't.token': oldToken } ] } );
+      }
+
+      return res.status(200).json({ message: 'ok' });
+    } catch (error) {
+      return next(error);
     }
   });
 
   // Get the bookings belonging to specific User
-  app.get('/api/user/:id/bookings', function (req, res) {
-    var id = parseInt(req.params.id);
+  app.get('/api/user/:id/bookings', async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
 
-    Booking.find({ user: id }).toArray(async function (err, books) {
-      var full = await Promise.all(books.map(async function (book) {
-        book.place = await Place.findOne({ _id: book.place }, { projection: { name: 1, address: 1, photos: 1, socials: 1, location: 1, address: 1, mainImage: 1 }});
-        if(book.place){
-          if(book.place.photos) {
-            book.place.photo = book.place.mainImage;
-            delete book.place.photos;
-          }
+      const bookings = await Booking.find({ user: id }).toArray();
+      const full = await Promise.all(bookings.map(async (booking) => {
+        booking.place = await Place.findOne(
+          { _id: booking.place },
+          { projection:
+            { name: 1,
+              address: 1,
+              photos: 1,
+              socials: 1,
+              location: 1,
+              address: 1,
+              mainImage: 1,
+            },
+        });
+        if (!booking.place) {
+          booking.place = {};
+          booking.place.photo = '';
+          booking.place.instaUser ='';
+        }
+        if(booking.place.photos) {
+          booking.place.photo = booking.place.mainImage;
+          delete booking.place.photos;
+        }
   
-          if(book.place.socials.instagram !== undefined && book.place.socials.instagram !== null) {
-            var match = book.place.socials.instagram.match(/^.*instagram.com\/(.*)\/?.*/i);
-            if(match) {
-              book.place.instaUser = match[1].replace('/', '');
-            } else {
-              book.place.instaUser = '';
-            }
+        if(booking.place.socials.instagram !== undefined && booking.place.socials.instagram !== null) {
+          const match = booking.place.socials.instagram.match(/^.*instagram.com\/(.*)\/?.*/i);
+          if(match) {
+            booking.place.instaUser = match[1].replace('/', '');
+          } else {
+            booking.place.instaUser = '';
           }
-        }else{
-          book.place = {};
-          book.place.photo = '';
-          book.place.instaUser ='';
         }
-
-        var date = moment(book.date + ' ' + book.endTime, 'DD-MM-YYYY HH.mm');
-        var tommorow = moment(date.add('1', 'days').format('DD-MM-YYYY'), 'DD-MM-YYYY');
-        var diff = tommorow.diff(moment(), 'days');
-        if (diff < 0 && !book.closed) {
-          Booking.findOneAndUpdate({_id: book._id}, {$set: {closed: true}});
-          book.closed = true;
+  
+        const date = moment(booking.date + ' ' + booking.endTime, 'DD-MM-YYYY HH.mm');
+        const tommorow = moment(date.add('1', 'days').format('DD-MM-YYYY'), 'DD-MM-YYYY');
+        const diff = tommorow.diff(moment(), 'days');
+        if (diff < 0 && !booking.closed) {
+          await Booking.findOneAndUpdate({ _id: booking._id }, { $set: { closed: true } });
+          booking.closed = true;
         }
-
+  
         if (diff < 0) {
           return;
         }
-
-        return book;
+  
+        return booking;
       }));
-      var newFull = full.filter(function (elem) {
-        return elem !== undefined;
-      });
-      res.json(newFull);
-    });
+  
+      return res.status(200).json(full.filter(elem => elem));
+    } catch (error) {
+      return next(error);
+    }
   });
 
-  app.get('/api/user/:id/bookNum', async function (req, res) {
-    var num = await Booking.find({ user: parseInt(req.params.id), closed: false, claimed: false }).count();
-    res.json({ activeBooks: num });
+  app.get('/api/user/:id/bookNum', async (req, res, next) => {
+    try {
+      const num = await Booking.find({ user: parseInt(req.params.id), closed: false, claimed: false }).count();
+      return res.status(200).json({ activeBooks: num });
+    } catch (error) {
+      return next(error);
+    }
   });
 
   // Get the offers belonging to specific User
-  app.get('/api/user/:id/offers', function (req, res) {
-    var id = parseInt(req.params.id);
+  app.get('/api/user/:id/offers', async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
 
-    Offer.find({ user: id }).toArray(function (err, offers) {
-      res.json(offers);
-    });
+      const offers = await Offer.find({ user: id }).toArray();
+      return res.status(200).json(offers);
+    } catch (error) {
+      return next(error);
+    }
   });
 
   // Get the offerPosts belonging to specific User
-  app.get('/api/user/:id/offerPosts', function (req, res) {
-    var id = parseInt(req.params.id);
-    if(id){
-      OfferPost.find({ user: id }).toArray(async function (err, posts) {
-        var user = await User.findOne({ _id: id }, { projection: { photo: 1, credits: 1, name: 1 }});
-        res.json({ posts: posts, user: user });
-      });
-    }else{
-      res.status(400).json({message: 'invalid parameter'})
+  app.get('/api/user/:id/offerPosts', async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (!id) {
+        throw ErrorResponse.BadRequest('provide valid id');
+      }
+      const posts = await OfferPost.find({ user: id }).toArray();
+      const user = await User.findOne({ _id: id }, { projection: { photo: 1, credits: 1, name: 1 }});
+
+      return res.status(200).json({ posts: posts, user: user });
+    } catch (error) {
+      return next(error);
     }
   });
 
   // Get all Users Offer Post with a good structure
-  app.get('/api/users/offerPosts', function (req, res) {
-    User.find({ 'offerPosts.0': { $exists: true }}, { projection: { credits: 1, photo: 1, name: 1, surname: 1 }}).toArray(async function (err, users) {
-      var full = await Promise.all(users.map(async function (user) {
-        user.posts = await OfferPost.find({ user: user._id }).toArray();
-        return user;
-      }));
-      res.json(full);
-    });
+  app.get('/api/users/offerPosts', async (req, res, next) => {
+    try {
+      const users = await User.find({
+        'offerPosts.0': { $exists: true } },
+        { projection: { credits: 1, photo: 1, name: 1, surname: 1 }}).toArray();
+      const full = await Promise.all(users.map(async (user) => ({
+        ...user,
+        posts: await OfferPost.find({ user: user._id }).toArray(),
+      })));
+
+      return res.status(200).json(full);  
+    } catch (error) {
+      return next(error);
+    }
   });
 
-  app.get('/api/user/:id/confirm/:hash', async (req, res) => {
-    var id = parseInt(req.params.id);
-    var hash = req.params.hash;
-    if(id && hash){
-      User.findOneAndUpdate({ _id : id, isEmailAcceptationPending: true, confirmHash : hash }, 
+  app.get('/api/user/:id/confirm/:hash', async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      const hash = req.params.hash;
+      if (!id || !hash) {
+        throw ErrorResponse.BadRequest('invalid parameters');
+      }
+      const user = await User.findOneAndUpdate(
+        { _id : id, isEmailAcceptationPending: true, confirmHash : hash }, 
         { $set : { isEmailAcceptationPending : false, confirmHash: null } },
-        {new: true}
-        )
-        .then((user) => {
-          if(user && user.value){
-            var filePath = path.join(__dirname, '../htmlTemplates/userConfirmed.html')
-            res.sendFile(filePath);
-          }else{
-            res.status(404).json({message: 'Not found'});
-          }
-        })
-        .catch((err) => {
-  
-        });
-    }else{
-      res.status(400).json({message: 'invalid parameters'});
+        { new: true });
+      if (!user || !user.value) {
+        throw ErrorResponse.NotFound();
+      }
+      const filePath = path.join(__dirname, '../htmlTemplates/userConfirmed.html');
+
+      return res.status(200).sendFile(filePath);
+    } catch (error) {
+      return next(error);
     }
   });
 
-  app.post('/api/user/forgotPassword', async (req,res) => {
-    var email = req.body.email;
-    if(email){
-      var temporaryPassword = crypto.randomBytes(2).toString('hex');
-      User.findOneAndUpdate({email:  email }, 
+  app.post('/api/user/forgotPassword', async (req, res, next) => {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        throw ErrorResponse.BadRequest('provide email');
+      }
+      const temporaryPassword = crypto.randomBytes(2).toString('hex');
+      const user = await User.findOneAndUpdate(
+        { email }, 
         { $set: { temporaryPassword : bcrypt.hashSync(temporaryPassword, bcrypt.genSaltSync(8), null) } }, 
-        { new: true, returnOriginal: false } )
-        .then(async (user) => {
-          await sendGrid.sendForgotPasswordEmail(temporaryPassword, user.value);
-          res.status(200).json({message: 'check your email'});
-        })
-        .catch((err) => {
-          res.status(404).json({message: 'user not found'});
-        });
-    }else{
-      res.status(400).json({message: 'invalid parameters'});
+        { new: true, returnOriginal: false });
+      if (!user || !user.value) {
+        throw ErrorResponse.NotFound('User not found');
+      }
+      await sendGrid.sendForgotPasswordEmail(temporaryPassword, user.value);
+      return res.status(200).json({ message: 'check your email' });
+    } catch (error) {
+      return next(error);
     }
   });
+
   //change password after login with temporary password
   //body: password, confirmPassword, temporaryPassword
-  app.post('/api/user/changePassword', middleware.isAuthorized, async (req, res) => {
-    var user = await req.user;
-    if(user){
-      var password = req.body.password;
-      var confirmPassword = req.body.confirmPassword;
-      if(password && confirmPassword && password == confirmPassword){
-        User.findOneAndUpdate({_id: user._id }, 
-          { $set: { temporaryPassword : null, password : bcrypt.hashSync(password, bcrypt.genSaltSync(8), null) } }, 
-          { new: true, returnOriginal: false } )
-          .then((user) => {
-            return res.status(200).json({message: "password has been updated"});
-          })
-          .catch((err) => {
-            res.status(404).json({message: 'user not found'});
-          });
-      }else{
-        res.status(400).json({message: 'invalid parameters'});
+  app.post('/api/user/changePassword', middleware.isAuthorized, async (req, res, next) => {
+    try {
+      const user = await req.user;
+      const { password, confirmPassword } = req.body;
+      if (!password || !confirmPassword || password !== confirmPassword) {
+        throw ErrorResponse.BadRequest('passwords dont match');
       }
-    }else{
-      res.status(400).json({message: 'User not authorize'});
+      const updatedUser = await User.findOneAndUpdate(
+        { _id: user._id }, 
+        { $set: { temporaryPassword : null, password : bcrypt.hashSync(password, bcrypt.genSaltSync(8), null) } }, 
+        { new: true, returnOriginal: false });
+      if (!updatedUser || !updatedUser.value) {
+        throw ErrorResponse.NotFound('User not found');
+      }
+      return res.status(200).json({ message: 'password has been updated' });
+    } catch (error) {
+      return next(error);
     }
   });
-  app.post('/api/user/changeCurrentPassword', middleware.isAuthorized, async (req, res) => {
-    var user = await req.user;
-    if(user){
-      var password = req.body.password;
-      var newPassword = req.body.newPassword;
-      var newConfirmPassword = req.body.newConfirmPassword;
-      if(password && newPassword && newConfirmPassword && newPassword == newConfirmPassword && bcrypt.compareSync(password, user.password)){
-          
-        User.findOneAndUpdate({_id: user._id }, 
-          { $set: { password : bcrypt.hashSync(newPassword, bcrypt.genSaltSync(8), null) } }, 
-          { new: true, returnOriginal: false } )
-          .then((user) => {
-            return res.status(200).json({message: "password has been updated"});
-          })
-          .catch((err) => {
-            res.status(404).json({message: 'user not found'});
-          });
-      }else{
-        res.status(400).json({message: 'invalid parameters'});
+
+  app.post('/api/user/changeCurrentPassword', middleware.isAuthorized, async (req, res, next) => {
+    try {
+      const user = await req.user;
+      const { password, newPassword, newConfirmPassword } = req.body;
+      if (!password
+        || !newPassword
+        || !newConfirmPassword
+        || newPassword !== newConfirmPassword
+        || !bcrypt.compareSync(password, user.password)) {
+          throw ErrorResponse.BadRequest('invalid parameters');
+        }
+      const updatedUser = await User.findOneAndUpdate(
+        {_id: user._id }, 
+        { $set: { password : bcrypt.hashSync(newPassword, bcrypt.genSaltSync(8), null) } }, 
+        { new: true, returnOriginal: false });
+      if (!updatedUser || !updatedUser.value) {
+        throw ErrorResponse.NotFound('User not found');
       }
-    }else{
-      res.status(400).json({message: 'User not authorize'});
+      return res.status(200).json({ message: 'password has been updated' });
+    } catch (error) {
+      return next(error);
     }
   });
+
   app.delete('/api/user/:id/images', async (req,res) => {
     var id = parseInt(req.params.id);
     var imageId = req.body.imageId || req.query.imageId;
@@ -500,82 +557,82 @@ module.exports = (app, validate, User, Offer, Booking, Place, OfferPost, UserPay
        res.status(400).json({message: "invalid parameter"});
     }
   });
-};
 
-function editUser(id, newUser, res) {
-  User.findOne({ _id: id }, function (err, user) {
-    err && console.log(err);
-
-    if(!user) {
-      res.json({ message: "No such user" });
-    } else {
-      
-      if(newUser.registerStep !== user.registerStep && newUser.registerStep) user.registerStep = newUser.registerStep;
-      if(newUser.name !== user.name && newUser.name) user.name = newUser.name;
-      if(newUser.surname !== user.surname && newUser.surname) user.surname = newUser.surname;
-      if(newUser.gender !== user.gender && newUser.gender) user.gender = newUser.gender;
-      if(newUser.nationality !== user.nationality && newUser.nationality) user.nationality = newUser.nationality;
-      if(newUser.birthDate !== user.birthDate && newUser.birthDate) user.birthDate = newUser.birthDate;
-      //if(newUser.email !== user.email && newUser.email) user.email = newUser.email;
-      if(newUser.phone !== user.phone && newUser.phone) user.phone = newUser.phone;
-      if(newUser.motherAgency !== user.motherAgency && newUser.motherAgency) user.motherAgency = newUser.motherAgency;
-      if(newUser.currentAgency !== user.currentAgency && newUser.currentAgency) user.currentAgency = newUser.currentAgency;
-      if(newUser.city !== user.city && newUser.city) user.city = newUser.city;
-      if(newUser.instagramName !== user.instagramName && newUser.instagramName) user.instagramName = newUser.instagramName;
-      if(newUser.level !== user.level && user.level) user.level = newUser.level;
-      if(user.admin !== undefined) user.admin = newUser.admin;
-      if(newUser.driver !== undefined) user.driver = newUser.driver;
-      if(newUser.driverCaptain !== undefined) user.driverCaptain = newUser.driverCaptain;
-      // Add a deviceID to the devices array of the User's document
-      if(newUser.deviceID) {
-        if(user.devices.indexOf(newUser.deviceID) === -1){
-          user.devices.push(newUser.deviceID);
+  function editUser(id, newUser, res) {
+    User.findOne({ _id: id }, function (err, user) {
+      err && console.log(err);
+  
+      if(!user) {
+        res.json({ message: "No such user" });
+      } else {
+        
+        if(newUser.registerStep !== user.registerStep && newUser.registerStep) user.registerStep = newUser.registerStep;
+        if(newUser.name !== user.name && newUser.name) user.name = newUser.name;
+        if(newUser.surname !== user.surname && newUser.surname) user.surname = newUser.surname;
+        if(newUser.gender !== user.gender && newUser.gender) user.gender = newUser.gender;
+        if(newUser.nationality !== user.nationality && newUser.nationality) user.nationality = newUser.nationality;
+        if(newUser.birthDate !== user.birthDate && newUser.birthDate) user.birthDate = newUser.birthDate;
+        //if(newUser.email !== user.email && newUser.email) user.email = newUser.email;
+        if(newUser.phone !== user.phone && newUser.phone) user.phone = newUser.phone;
+        if(newUser.motherAgency !== user.motherAgency && newUser.motherAgency) user.motherAgency = newUser.motherAgency;
+        if(newUser.currentAgency !== user.currentAgency && newUser.currentAgency) user.currentAgency = newUser.currentAgency;
+        if(newUser.city !== user.city && newUser.city) user.city = newUser.city;
+        if(newUser.instagramName !== user.instagramName && newUser.instagramName) user.instagramName = newUser.instagramName;
+        if(newUser.level !== user.level && user.level) user.level = newUser.level;
+        if(user.admin !== undefined) user.admin = newUser.admin;
+        if(newUser.driver !== undefined) user.driver = newUser.driver;
+        if(newUser.driverCaptain !== undefined) user.driverCaptain = newUser.driverCaptain;
+        // Add a deviceID to the devices array of the User's document
+        if(newUser.deviceID) {
+          if(user.devices.indexOf(newUser.deviceID) === -1){
+            user.devices.push(newUser.deviceID);
+          }
         }
-      }
-      
-      // User can link a referral only if he has not registered yet
-      if(newUser.referral && !user.referredFrom) {
-        var refCredits = 150;
-        User.findOne({ referralCode: newUser.referral }, function(err, us) {
-          if(!us) {
-            res.json({ message: "Wrong Referral Code" });
-          } else {
-            if(us._id === user._id){
-              res.json({ message: "You cannot be a referral of yourself" });
+        
+        // User can link a referral only if he has not registered yet
+        if(newUser.referral && !user.referredFrom) {
+          var refCredits = 150;
+          User.findOne({ referralCode: newUser.referral }, function(err, us) {
+            if(!us) {
+              res.json({ message: "Wrong Referral Code" });
             } else {
-              if(user.referredFrom){
-                res.json({ message: "You have already referred" });
+              if(us._id === user._id){
+                res.json({ message: "You cannot be a referral of yourself" });
               } else {
-                user.referredFrom = us._id;
-                user.credits += refCredits;
-                user.creationDate = moment().format('DD-MM-YYYY');
-                user.newUser = false;
-
-                User.replaceOne({ _id: id }, user, function () {
-                  res.json({ message: "Profile updated with referral code" });
-                });
-
-                User.findOneAndUpdate({ referralCode: newUser.referral },
-                  { $push: { referrals: user._id }, $inc: { credits: refCredits }});
-
-                // Send push notifications to all referral code owner's devices
-                if(us.devices){
-                  pushProvider.sendReferralINotification(us.devices, user.name + ' ' + user.surname)
-                    .then(() => {
-                      
-                    });
+                if(user.referredFrom){
+                  res.json({ message: "You have already referred" });
+                } else {
+                  user.referredFrom = us._id;
+                  user.credits += refCredits;
+                  user.creationDate = moment().format('DD-MM-YYYY');
+                  user.newUser = false;
+  
+                  User.replaceOne({ _id: id }, user, function () {
+                    res.json({ message: "Profile updated with referral code" });
+                  });
+  
+                  User.findOneAndUpdate({ referralCode: newUser.referral },
+                    { $push: { referrals: user._id }, $inc: { credits: refCredits }});
+  
+                  // Send push notifications to all referral code owner's devices
+                  if(us.devices){
+                    pushProvider.sendReferralINotification(us.devices, user.name + ' ' + user.surname)
+                      .then(() => {
+                        
+                      });
+                  }
                 }
               }
             }
-          }
-        });
-      } else {
-        if(user.newUser) user.creationDate = moment().format('DD-MM-YYYY');
-        user.newUser = false;
-        User.replaceOne({_id: id}, user, function () {
-          res.json({ message: "Profile updated" });
-        });
+          });
+        } else {
+          if(user.newUser) user.creationDate = moment().format('DD-MM-YYYY');
+          user.newUser = false;
+          User.replaceOne({_id: id}, user, function () {
+            res.json({ message: "Profile updated" });
+          });
+        }
       }
-    }
-  });
-}
+    });
+  }
+};
