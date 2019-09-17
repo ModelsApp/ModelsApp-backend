@@ -161,7 +161,7 @@ async function bootstrap() {
     newBookingRepository(),
     newEventBookingRepository(),
     newEventRepository(),
-    newPlaceUtil(),
+    newBookingUtil(),
     User, Place, Offer, Counter, Booking, OfferPost, Interval, SamplePost,
   );
   require('./routes/interval')(app, User, Place, Offer, Counter, Booking, OfferPost, Interval, SamplePost);

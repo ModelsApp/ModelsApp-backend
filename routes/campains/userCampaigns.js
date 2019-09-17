@@ -14,7 +14,7 @@ let pushProvider = require('../../lib/pushProvider');
 //4 - photo approved
 //-2 - photo rejected
 
-module.exports = (app, Campaign, UserCampaign, User, entityHelper) => {
+module.exports = (app, Campaign, UserCampaign, User, getNewId) => {
   
     app.post('/api/campaign', middleware.isAuthorized,  async (req, res) => {
       let qrCode = req.body.qrCode;
@@ -60,7 +60,7 @@ module.exports = (app, Campaign, UserCampaign, User, entityHelper) => {
                         imageCount = campaign.tasks.find(x => x.type == 'photo').count;
                     }
                     let userCampaign = {
-                        _id: await entityHelper.getNewId('userCampaignId'),
+                        _id: await getNewId('userCampaignId'),
                         user: user._id,
                         campaign: campaign._id,
                         isAccepted: false,

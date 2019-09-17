@@ -12,7 +12,7 @@ function generateUserToken(req, res) {
   }
 }
 
-module.exports = (app, User, Profile, entityHelper) => {
+module.exports = (app, User, Profile, getNewId) => {
 
   // Instagram authentication
   app.get(
@@ -129,6 +129,6 @@ module.exports = (app, User, Profile, entityHelper) => {
       })(req, res, next);
   });
   
-   app.post('/api/auth/user/signin', authEmail.newCreateUser(entityHelper, User));
+   app.post('/api/auth/user/signin', authEmail.newCreateUser(getNewId, User));
    app.post('/api/auth/user/login', authEmail.newLoginUser(User));
 };

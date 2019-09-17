@@ -26,7 +26,7 @@ module.exports = (
   deleteEvent,
   placeUtil,
   validate,
-  User, Place, Offer, Counter, Booking, OfferPost, Interval, SamplePost, entityHelper,
+  User, Place, Offer, Counter, Booking, OfferPost, Interval, SamplePost, getNewId,
 ) => {
   app.get('/api/place/:id/daysOffs', async (req, res) => {
     var id = parseInt(req.params.id);
@@ -163,7 +163,7 @@ module.exports = (
     place._id = seq.value.seq;
 
     const placeInserted = await Place.insertOne(place);
-    const id = await entityHelper.getNewId('intervalsid');
+    const id = await getNewId('intervalsid');
     const interval = {
       _id: id,
       place: seq.value.seq,

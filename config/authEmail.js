@@ -6,7 +6,7 @@ const { SUBSCRIPTION } = require('./constant');
 
 var exports = module.exports = {};
 
-exports.newCreateUser = (entityHelper, User) => async (req, res, next) => {
+exports.newCreateUser = (getNewId, User) => async (req, res, next) => {
     console.log(req, res, next)
     var email = req.body.email;
     var password = req.body.password;
@@ -18,7 +18,7 @@ exports.newCreateUser = (entityHelper, User) => async (req, res, next) => {
         var user = await User.findOne({ email:  email});
         if(!user){
             var newUser = {
-                _id : await entityHelper.getNewId('userid'),
+                _id : await getNewId('userid'),
                 email : email,
                 password : bcrypt.hashSync(password, bcrypt.genSaltSync(8), null),
                 photo: null,

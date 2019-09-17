@@ -9,14 +9,14 @@ const ErrorResponse = require('./../../../core/errorResponse');
 const pushProvider = require('../../../lib/pushProvider');
 
 class BookingUtil {
-  constructor(Place, User, Interval, Offer, Booking, placeUtil, entityHelper) {
+  constructor(Place, User, Interval, Offer, Booking, placeUtil, getNewId) {
     this.Place = Place;
     this.User = User;
     this.Interval = Interval;
     this.Offer = Offer;
     this.Booking = Booking;
     this.placeUtil = placeUtil;
-    this.entityHelper = entityHelper;
+    this.getNewId = getNewId;
   }
 
   placeAllowsUserGender(place, user) {
@@ -60,11 +60,11 @@ class BookingUtil {
       throw ErrorResponse.BadRequest('Chosen date does not match interval');
     }
 
-    if (!moment(`${date.format('YYYY-MM-DD')} ${chosenInterval.start.replace('.',':')}`).isValid()){
+    if (!moment(`${date.format('YYYY-MM-DD')} ${chosenInterval.end.replace('.',':')}`).isValid()){
       throw ErrorResponse.BadRequest('Invalid date');
     }
 
-    let fullDate = moment(`${date.format('YYYY-MM-DD')} ${chosenInterval.start.replace('.',':')}`);
+    let fullDate = moment(`${date.format('YYYY-MM-DD')} ${chosenInterval.end.replace('.',':')}`);
     let timesValidation = await this.validateTimes(fullDate);
     if (!timesValidation.isValid) {
       throw ErrorResponse.BadRequest(timesValidation.error);
@@ -101,7 +101,7 @@ class BookingUtil {
       throw ErrorResponse.Unauthorized('Cannot book inactive place');
     }
     const newBooking = {
-      _id: await this.entityHelper.getNewId('bookingid'),
+      _id: await this.getNewId('bookingid'),
       user: userID,
       place: id,
       date: moment(fullDate).format('DD-MM-YYYY'),
@@ -176,29 +176,29 @@ class BookingUtil {
       isValid : false,
       error: ''
     }
-    if(fullDate.isValid()){
-      let rightRange = moment().add(7, 'days');
-      var diffSecods = moment.duration(fullDate.diff(moment())).asSeconds();
-
-      //handle 7 days forward
-      if(!fullDate.isAfter(rightRange)){
-        //check if interval is in past
-        if(fullDate.isAfter(moment())){ 
-          // check difference between now and inteval is if is bigger then hour
-          if(diffSecods > 3600){
-            validation.isValid = true;
-          }else{
-            validation.error = "there must be at least on hour before booking"; 
-          }
-        }else{
-          validation.error = "the slot is in the past";
-        }
-      }else{
-        validation.error = "you can book place max 7 days forward";
-      }
-    }else{
+    if (!fullDate.isValid()) {
       validation.error = "invalid date";
+      return validation;
     }
+    const rightRange = moment().add(7, 'days');
+    const diffSeconds = moment.duration(fullDate.diff(moment())).asSeconds();
+
+    if (fullDate.isAfter(rightRange)) {
+      validation.error = "you can book place max 7 days forward";
+      return validation;
+    }
+
+    if (!fullDate.isAfter(moment())) {
+      validation.error = "the slot is in the past";
+      return validation;
+    }
+
+    if (diffSeconds <= 1800) {
+      validation.error = "booking has to happen at least 30 minutes before timeframe end"; 
+      return validation;
+    }
+
+    validation.isValid = true;
     return validation;
   }
 
@@ -373,4 +373,6 @@ class BookingUtil {
   }
 }
 
-module.exports = (Place, User, Interval, Offer, Booking, placeUtil) => new BookingUtil(Place, User, Interval, Offer, Booking, placeUtil);
+module.exports = (
+  Place, User, Interval, Offer, Booking, placeUtil, getNewId,
+) => new BookingUtil(Place, User, Interval, Offer, Booking, placeUtil, getNewId);

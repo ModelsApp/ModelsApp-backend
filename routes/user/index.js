@@ -14,7 +14,7 @@ const newEditUserAdminSchema = require('./schema/editUserAdmin');
 const ErrorResponse = require('./../../core/errorResponse');
 const { SUBSCRIPTION } = require('./../../config/constant');
 
-module.exports = (app, validate, User, Offer, Booking, Place, OfferPost, UserPaymentToken, entityHelper) => {
+module.exports = (app, validate, User, Offer, Booking, Place, OfferPost, UserPaymentToken, getNewId) => {
 
   // Get the current (authenticated) User
   app.get('/api/user/current', middleware.isAuthorized, async (req, res, next) => {
@@ -32,7 +32,7 @@ module.exports = (app, validate, User, Offer, Booking, Place, OfferPost, UserPay
       const user = await req.user;
       if (id && token && user) {
         const userPaymentToken = {
-          _id: await entityHelper.getNewId('userPaymentTokenId'),
+          _id: await getNewId('userPaymentTokenId'),
           id,
           token,
           userId: user._id

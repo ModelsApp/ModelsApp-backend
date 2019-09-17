@@ -13,7 +13,7 @@ const { OFFER_SCOPES } = require('./constant');
 
 module.exports = (
   app, actionPointsRepository, userRepository, offerRepository, validate,
-  User, Place, Offer, Counter, Booking, OfferPost, Interval, SamplePost, entityHelper) => {
+  User, Place, Offer, Counter, Booking, OfferPost, Interval, SamplePost, getNewId) => {
 
   // Offers section
   // ______________________________
@@ -454,7 +454,7 @@ module.exports = (
               foundBookingAction.attempts = foundBookingAction.attempts + 1;
               if(!foundBookingAction.isPictureRequired || (foundBookingAction.isPictureRequired && files && files.images && files.images.length > 0)){
                 try {
-                  let id = await entityHelper.getNewId('offerpostid')
+                  let id = await getNewId('offerpostid')
                   const bookingAct = foundBookingAction.parentId ? (await getBookingAction(foundBookingAction.parentId, bookingAction.actions)) : foundBookingAction;
                   const actionPoints = await actionPointsRepository.findOne(bookingAct.type);
                   if (!actionPoints) {

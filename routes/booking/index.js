@@ -2,14 +2,11 @@ const _ = require('lodash');
 const moment = require('moment');
 const crypto = require('crypto');
 
-const newBookingUtil = require('./util');
 const middleware = require('./../../config/authMiddleware');
 const ErrorResponse = require('./../../core/errorResponse');
 
-module.exports = (app, placeRepository, userRepository, bookingRepository, eventBookingRepository, eventRepository, placeUtil,
-  User, Place, Offer, Counter, Booking, OfferPost, Interval, SamplePost) => {
-
-  const bookingUtil = newBookingUtil(Place, User, Interval, Offer, Booking, placeUtil);
+module.exports = (app, placeRepository, userRepository, bookingRepository, eventBookingRepository, eventRepository,
+  bookingUtil, User, Place, Offer, Counter, Booking, OfferPost, Interval, SamplePost) => {
 
   app.get('/api/place/:id/book/slots', async (req, res, next) => {
     try {
@@ -247,12 +244,11 @@ module.exports = (app, placeRepository, userRepository, bookingRepository, event
 
     try {
       const { fullDate, offers, chosenInterval, place } = await bookingUtil.bookPossible(id, userID, intervalId, date);
-      await bookingUtil.book(id, userID, fullDate, offers, chosenInterval, place);
+      const booking = await bookingUtil.book(id, userID, fullDate, offers, chosenInterval, place);
+      return res.status(200).json({ message: 'Booked', data: booking });
     } catch (error) {
       next(error);
     }
-
-    return res.status(200).json({ message: 'Booked' });
   });
 
   // Create the Booking and link it with User and the Place

@@ -4,7 +4,7 @@ var moment = require('moment');
 var pushProvider = require('../lib/pushProvider');
 const { SUBSCRIPTION } = require('./constant');
 
-module.exports = (passport, Place, Counter, User, Interval, entityHelper) => {
+module.exports = (passport, Place, Counter, User, Interval, getNewId) => {
   passport.use('local-signup', new Strategy({
     usernameField: 'email',
     passwordField: 'password',
@@ -67,7 +67,7 @@ module.exports = (passport, Place, Counter, User, Interval, entityHelper) => {
                     isActive: true
                   };
                   Place.insertOne(newPlace);
-                  entityHelper.getNewId('intervalsid').then((id) => {
+                  getNewId('intervalsid').then((id) => {
                     let interval = {
                       _id: id,
                       place: seq.value.seq,

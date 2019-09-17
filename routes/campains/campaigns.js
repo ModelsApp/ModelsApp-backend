@@ -6,7 +6,7 @@ let multiparty = require('multiparty');
 let middleware = require('../../config/authMiddleware');
 let crypto = require('crypto');
 
-module.exports = (app, User, Campaign, UserCampaign, CampaignInterval, entityHelper) => {
+module.exports = (app, User, Campaign, UserCampaign, CampaignInterval, getNewId) => {
   //create new campaing
   app.post('/api/admin/campaign', async (req, res) => {
     let campaign =  req.body;
@@ -15,7 +15,7 @@ module.exports = (app, User, Campaign, UserCampaign, CampaignInterval, entityHel
       let rewardValidator = await validateRewards(campaign.rewards);
       let taskValidator = await validateTasks(campaign.tasks)
       if(rewardValidator.isValid && taskValidator.isValid){
-        campaign._id = await entityHelper.getNewId('campaignId');
+        campaign._id = await getNewId('campaignId');
         campaign.mainImage = null;
         campaign.qrCode = crypto.randomBytes(20).toString('hex');
         campaign.users = [];
