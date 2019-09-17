@@ -92,34 +92,43 @@ module.exports = (app, placeRepository, userRepository, bookingRepository, event
     }
   });
 
-  getSinglePlaceSlots = (place, day, date) => {
+  getSinglePlaceSlots = async (place, day, date) => {
     const { _id } = place;
-    return new Promise((resolve) => {
-      Interval.findOne({ place: _id }, async (err, intervals) => {
-        if (err || !intervals) {
-          return resolve(null);
-        }
-        let dayOff = null;
-        if (place.daysOffs) dayOff = place.daysOffs.find(x => x.date == date);
+    const intervals = await Interval.findOne({ place: _id });
 
-        const newArr = await Promise.all(intervals.intervals.map(async (interval) => {
-          if (interval.day == day.format('dddd')){
-            if (dayOff && (dayOff.isWholeDay || dayOff.intervals.filter(x=>x.start == interval.start && x.end == interval.end).length > 0)) {
-              interval.free = 0;
-            } else {
-              const taken = await Booking.countDocuments({ place: _id, date: date, startTime: interval.start, day: interval.day });
-              interval.free = interval.slots - taken;
-            }
-            interval._id = crypto.createHash('sha1').update(`${interval.start}${interval.end}${interval.day}`).digest("hex");
-            interval.timestamp = moment(`2019-01-01 ${interval.start.replace('.',':')}`).format("X");
-            return interval;
-          }
-        }));
-        return resolve(newArr
-          .filter(x => x != null)
-          .sort((a,b) => a.timestamp > b.timestamp));
-      });
-    });
+    if (!intervals) {
+      return null;
+    }
+    
+    const dayOff = place.daysOffs ? place.daysOffs.find(x => x.date === date) : null;
+
+    const newArr = await Promise.all(intervals.intervals.map(async (interval) => {
+      if (interval.day !== day.format('dddd')) {
+        return;
+      }
+      if (
+        dayOff
+        && (dayOff.isWholeDay || dayOff.intervals
+          .filter(x=> x.start === interval.start && x.end === interval.end).length > 0)
+      ) {
+        interval.free = 0;
+      } else {
+        const taken = await Booking.countDocuments({
+          place: _id,
+          date: date,
+          startTime: interval.start,
+          day: interval.day,
+        });
+        interval.free = interval.slots - taken;
+      }
+      interval._id = crypto.createHash('sha1').update(`${interval.start}${interval.end}${interval.day}`).digest('hex');
+      interval.timestamp = moment(`2019-01-01 ${interval.start.replace('.',':')}`).format('X');
+
+      return interval;
+    }));
+    return newArr
+      .filter(x => x != null)
+      .sort((a,b) => a.timestamp > b.timestamp);
   }
 
   // Get the specific Booking
@@ -302,143 +311,137 @@ module.exports = (app, placeRepository, userRepository, bookingRepository, event
         offerActions: [],
       };
 
-      // refactor this further
       let minOfferPrice = 0;
       let offers;
       if (req.body.offers) {
         for (var num of req.body.offers) {
           newBooking.offers.push(parseInt(num));
         }
-        offers = await Offer.find({_id: {$in: newBooking.offers}}, {projection: {level: 1}}).toArray();
+        offers = await Offer.find({ _id: { $in: newBooking.offers } }, { projection: { level: 1 } }).toArray();
       } else {
-        offers = await Offer.find({place: newBooking.place}, {projection: {level: 1}}).toArray();
+        offers = await Offer.find({ place: newBooking.place }, { projection: { level: 1 } }).toArray();
       }
       offers = bookingUtil.generateOfferPrices(offers, user.level);
       const offerPrices = offers.map(o => o.price);
       minOfferPrice = offerPrices.sort((a, b) => a - b)[0];
 
-      Interval.findOne({place: id}, async function (err, interval) {
-        if (!interval || !interval.intervals[intervalNum]) {
-          res.status(404).json({message: "No intervals for this place"});
-        } 
-        else {
-              newBooking.startTime = interval.intervals[intervalNum]["start"];
-              newBooking.endTime = interval.intervals[intervalNum]["end"];
+      const intervalFound = await Interval.findOne({ place: id });
+      if (!intervalFound || !intervalFound.intervals[intervalNum]) {
+        throw ErrorResponse.NotFound('No intervals for this place');
+      }
+      newBooking.startTime = intervalFound.intervals[intervalNum]["start"];
+      newBooking.endTime = intervalFound.intervals[intervalNum]["end"];
   
-              Booking.findOne({
-                place: id,
-                date: newBooking.date,
-                user: newBooking.user,
-                closed: false
-              }, {projection: {_id: 1}}, function (err, book) {
-              if (book) {
-                res.status(500);
-                res.json({message: "Sorry, you have already booked a spot for that day here"});
-              } else {
-                Booking.find({
-                  place: id,
-                  date: newBooking.date,
-                  startTime: newBooking.startTime,
-                  closed: false
-                }, {projection: {_id: 1}}).toArray(function (err, books) {
-  
-                  Place.findOne({_id: id}, {slots: 1}, function (err, place) {
-                    if (!place) {
-                      res.json({message: "No such place"});
-                    } else {
-                      if (books.length >= newBooking.slot) {
-                        res.status(500);
-                        res.json({message: "Sorry, all slots are booked for this time"});
-                      } else {
-  
-                        // if(moment().isBefore(moment(newBooking.date + ' ' + newBooking.startTime, 'DD-MM-YYYY HH.mm'))) {
-                        Counter.findOneAndUpdate({_id: "bookingid"}, {$inc: {seq: 1}}, {new: true}, function (err, seq) {
-                          if (err) console.log(err);
-                          newBooking._id = seq.value.seq;
-                          
-                          User.findOne({_id: newBooking.user}, {projection: {credits: 1}}, function (err, user) {
-                            if (!user) {
-                              res.json({message: "No such user"});
-                            } else {
-                              if (user.credits < minOfferPrice) {
-                                res
-                                  .status(402)
-                                  .json({
-                                    message: "Sorry, you don't have enough credits.",
-                                  });
-                              } else {
-                                newBooking.payed = parseInt(minOfferPrice / 2);
-  
-                                Place.findOneAndUpdate({_id: id}, {$push: {bookings: seq.value.seq}}, function () {
-                                  User.findOneAndUpdate({_id: newBooking.user}, {
-                                    $push: {bookings: seq.value.seq},
-                                    $inc: {credits: parseInt(minOfferPrice / (-2))}
-                                  });
-                                  Booking.insertOne(newBooking);
-                                  res.json({message: "Booked"});
-                                });
-  
-                                Booking.insertOne(newBooking).then((booking) => {
-                                  bookingUtil.sendBookingEmailMessage(place, newBooking).then(()=> {
-                                    res.json({message: "Booked"});
-                                  });
-                                });
-                                //res.json({message: "Booked"});
-                              };
-                            }
-                          });
-                        });
-                      }
-                    }
-                  });
-                });
-              }
-            });
-          }
+      const booking = await Booking.findOne(
+      {
+        place: id,
+        date: newBooking.date,
+        user: newBooking.user,
+        closed: false
+      },
+      {
+        projection: { _id: 1 },
       });
 
+      if (booking) {
+        throw ErrorResponse.Unauthorized('Sorry, you have already booked a spot for that day here');
+      }
+      const bookings = await Booking.find(
+        {
+          place: id,
+          date: newBooking.date,
+          startTime: newBooking.startTime,
+          closed: false,
+        },
+        {
+          projection: { _id: 1 },
+        }).toArray();
+
+      const place = await Place.findOne({ _id: id }, { slots: 1 });
+      
+      if (!place) {
+        throw ErrorResponse.NotFound('No such place');
+      }
+      if (bookings.length >= newBooking.slot) {
+        throw ErrorResponse.Unauthorized('Sorry, all slots are booked for this time');
+      }
+      const seq = await Counter.findOneAndUpdate(
+        {
+          _id: 'bookingid',
+        },
+        {
+          $inc: { seq: 1 },
+        },
+        {
+          new: true,
+        });
+      newBooking._id = seq.value.seq;
+      const userFound = await User.findOne(
+        {
+          _id: newBooking.user
+        },
+        {
+          projection: { credits: 1 },
+        });
+
+      if (!userFound) {
+        throw ErrorResponse.NotFound('No such user');
+      }
+      if (userFound.credits < minOfferPrice) {
+        throw ErrorResponse.Unauthorized("Sorry, you don't have enough credits.");
+      }
+
+      newBooking.payed = parseInt(minOfferPrice / 2);
+      await Place.findOneAndUpdate({ _id: id }, { $push: { bookings: seq.value.seq } });
+      await User.findOneAndUpdate(
+        {
+          _id: newBooking.userFound,
+        },
+        {
+          $push: { bookings: seq.value.seq },
+          $inc: { credits: parseInt(minOfferPrice / (-2)) },
+        });
+      await Booking.insertOne(newBooking);
+      await bookingUtil.sendBookingEmailMessage(place, newBooking);
+
+      return res.status(200).json({ message: 'Booked' });
     } catch (error) {
       return next(error);
     }
   });
 
-  app.put('/api/place/book/:id/claim', function (req, res, next) {
-
-    Booking.findOne({_id: parseInt(req.params.id)}, async function (err, book) {
-      if (!book) {
-        res.json({message: "No such booking"});
-      } else {
-
-        var offers = await Offer.find({_id: {$in: book.offers}}, {projection: {level: 1}}).toArray();
-        let user;
-        try {
-          user = await User.findOne({ _id: book.user });
-        } catch (error) {
-          return res.status(500).json({ message: 'Internal server error' });
-        }
-        if (!user) {
-          return res.status(404).json({ message: 'User not found' });
-        }
-        try {
-          offers = bookingUtil.generateOfferPrices(offers, user.level);
-        } catch (error) {
-          return next(error);
-        }
-        var sum = 0;
-        offers.forEach(function (offer) {
-          sum += offer.price;
-        });
-        sum -= book.payed;
-
-        User.findOneAndUpdate({_id: book.user}, {$inc: {credits: sum * (-1)}});
-
-        Booking.findOneAndUpdate({_id: parseInt(req.params.id)}, {
-          $set: {claimed: true},
-          $inc: {payed: sum}
-        }, function (err, book) {
-          res.json({message: "Claimed"});
-        });
+  app.put('/api/place/book/:id/claim', async (req, res, next) => {
+    try {
+      const booking = await Booking.findOne({ _id: parseInt(req.params.id) });
+      if (!booking) {
+        throw ErrorResponse.NotFound('No such booking');
       }
-    });
+      let offers = await Offer.find({ _id: { $in: booking.offers } }, { projection: { level: 1 } }).toArray();
+      let user = await User.findOne({ _id: booking.user });
+      if (!user) {
+        throw ErrorResponse.NotFound('User not found');
+      }
+      offers = bookingUtil.generateOfferPrices(offers, user.level);
+      let sum = 0;
+      offers.forEach((offer) => { sum += offer.price });
+      sum -= booking.payed;
+
+      if (sum > 0) {
+        sum = -sum;
+      }
+      await User.findOneAndUpdate({ _id: booking.user }, { $inc: { credits: sum } });
+      await Booking.findOneAndUpdate(
+        {
+          _id: parseInt(req.params.id),
+        },
+        {
+          $set: { claimed: true },
+          $inc: { payed: sum },
+        });
+
+      return res.status(200).json({ message: 'Claimed' });
+    } catch (error) {
+      return next(error);
+    }
   });
 }
