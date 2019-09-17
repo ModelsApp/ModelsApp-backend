@@ -256,8 +256,7 @@ async function bootstrap() {
   );
 
   addErrorHandling(app);
-
-  functions.checkBookingExpired(db);
+  
   functions.sendReportBookingEmail(db);
 
   const PORT = process.env.PORT || 3000;
