@@ -93,6 +93,8 @@ async function bootstrap() {
     client,
     newRequirementRepository(),
     newPlaceRepository(),
+    newOfferRepository(),
+    newIntervalRepository(),
     newBookingUtil(),
   );
   const newIntervalRepository = () => intervalRepository(Interval);

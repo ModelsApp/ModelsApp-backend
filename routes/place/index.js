@@ -302,6 +302,14 @@ module.exports = (
           event.placesOffers.map(
             (placeOffer) => eventRepository.joinPlaceOffersPlace(placeOffer)
           ));
+        event.placesOffers = await Promise.all(
+          event.placesOffers.map(
+            (placeOffer) => eventRepository.joinPlaceOffersOffers(placeOffer),
+          ));
+        event.placesOffers = await Promise.all(
+          event.placesOffers.map(
+            (placeOffer) => eventRepository.joinPlaceOffersInterval(placeOffer),
+          ));
       }
       place = await placeRepository.joinRequirements(place);
   

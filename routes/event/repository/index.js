@@ -16,10 +16,12 @@ const getObjectId = (id) => {
 }
 
 class EventRepository extends Repository {
-  constructor(model, client, requirementRepository, placeRepository, bookUtil) {
+  constructor(model, client, requirementRepository, placeRepository, offerRepository, intervalRepository, bookUtil) {
     super(model, client);
     this.requirementRepository = requirementRepository;
     this.placeRepository = placeRepository;
+    this.offerRepository = offerRepository;
+    this.intervalRepository = intervalRepository;
     this.bookUtil = bookUtil;
   }
 
@@ -185,6 +187,21 @@ class EventRepository extends Repository {
       },
     }
   }
+
+  async joinPlaceOffersOffers(placeOffers) {
+    return {
+      ...placeOffers,
+      offers: await this.offerRepository.findManyByIds(placeOffers.offerIds),
+    }
+  }
+
+  async joinPlaceOffersInterval(placeOffers) {
+    return {
+      ...placeOffers,
+      interval: (await this.bookUtil.getPlaceIntervals(placeOffers.placeId))
+        .find(interval => placeOffers.intervalId === interval._id),
+    }
+  }
 }
 
 const newEventRepository = (
@@ -192,7 +209,17 @@ const newEventRepository = (
   client,
   requirementRepository,
   placeRepository,
+  offerRepository,
+  intervalRepository,
   bookUtil,
-) => new EventRepository(model, client, requirementRepository, placeRepository, bookUtil);
+) => new EventRepository(
+  model,
+  client,
+  requirementRepository,
+  placeRepository,
+  offerRepository,
+  intervalRepository,
+  bookUtil,
+);
 
 module.exports = newEventRepository;
