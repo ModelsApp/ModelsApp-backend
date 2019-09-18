@@ -1,160 +1,181 @@
-var moment = require('moment');
-var crypto = require('crypto');
+const moment = require('moment');
+const crypto = require('crypto');
 
-module.exports = (app, User, Place, Offer, Counter, Booking, OfferPost, Interval, SamplePost) => {
+const ErrorResponse = require('./../../core/errorResponse');
 
+module.exports = (app, Interval, Offer) => {
   // Get Booking Intervals for the specific place
-  app.get('/api/place/:id/intervals', function (req, res) {
-      var id = parseInt(req.params.id);
-      Interval.findOne({place: id}, function (err, interval) {
-        if (!interval) {
-          res.status(404).json({message: "No such intervals"});
-        } else {
-          res.status(200).json(toIntervalViewModel(interval));
-        }
-      })
-  });
-app.put('/api/place/:id/intervals/:intervalId', async function (req, res) {
-    var placeId = parseInt(req.params.id);
-    var intervalId = parseInt(req.params.intervalId);
-    var slotId = req.body.slotId;
+  app.get('/api/place/:id/intervals', async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id);
+      const interval = await Interval.findOne({ place: id });
 
-    if(placeId && intervalId){
-          let interval = await Interval.findOne({ _id: intervalId , place : placeId });
-          if(interval){
-            let isValid = validateSingleInterval(req.body);
-            let isOfferValid = await validateOffers(req.body.offers, placeId);
-            if(isValid && isOfferValid){
-              //existing slot let 
-                if(slotId){
-                  interval.intervals = interval.intervals.map(interval => {
-                    let id = crypto.createHash('sha1').update(`${interval.start}${interval.end}${interval.day}`).digest("hex");
-                    if(id == slotId){
-                      interval.start = req.body.start;
-                      interval.end = req.body.end;
-                      interval.day = req.body.day;
-                      interval.slots = req.body.slots;
-                      interval.offers = req.body.offers;
-                    }
-                    return interval;
-                  });
-                  await Interval.replaceOne({_id : intervalId }, interval);
+      if (!interval) {
+        throw ErrorResponse.NotFound('No such intervals');
+      }
 
-                  res.status(200).json({message : "updated", interval:  toIntervalViewModel(interval)});
-                }else{
-                  interval.intervals.push({
-                    start: req.body.start,
-                    end: req.body.end,
-                    slots: req.body.slots,
-                    day: req.body.day,
-                    offers: req.body.offers
-                  });
-                  await Interval.replaceOne({_id : intervalId }, interval);
-                  res.status(200).json({message : "added", interval: toIntervalViewModel(interval)});
-                }
-            }else{
-              res.status(400).json({message: "Interval not valid: should have start, end, slots, day: (english day of week)"})
-            }
-        }else{
-          res.status(404).json({message : "interval not found"});
-        }
-    }else{
-      res.status(400).json({message : "invalid parameters: placeId, intervalId, offerId, slotId"});
-    }
-});
-  app.delete('/api/place/:id/intervals/:intervalId', async function (req, res) {
-    var placeId = parseInt(req.params.id);
-    var intervalId = parseInt(req.params.intervalId);
-    var slotId = req.body.slotId;
-
-    if(placeId && intervalId && slotId){
-          let interval = await Interval.findOne({ _id: intervalId , place : placeId });
-          if(interval){
-            interval.intervals = interval.intervals.map(interval => {
-              interval._id = crypto.createHash('sha1').update(`${interval.start}${interval.end}${interval.day}`).digest("hex");
-              return interval;
-            });
-            interval.intervals = interval.intervals.filter(interval => interval._id != slotId);
-            interval.intervals = interval.intervals.map(interval => {
-              delete interval._id;
-              return interval;
-            });
-            await Interval.replaceOne({_id : intervalId }, interval);
-
-            res.status(200).json({message : "updated", interval: toIntervalViewModel(interval)});
-        }else{
-          res.status(404).json({message : "interval not found"});
-        }
-    }else{
-      res.status(400).json({message : "invalid parameters: placeId, intervalId, offerId, slotId"});
+      return res.status(200).json(toIntervalViewModel(interval));
+    } catch (error) {
+      return next(error);
     }
   });
-}
 
-toIntervalViewModel = (interval) => {
-  interval.intervals = interval.intervals.map(interval => {
-    interval._id = crypto.createHash('sha1').update(`${interval.start}${interval.end}${interval.day}`).digest("hex");
+  app.put('/api/place/:id/intervals/:intervalId', async (req, res, next) => {
+    try {
+      const placeId = parseInt(req.params.id);
+      const intervalId = parseInt(req.params.intervalId);
+      const { slotId } = req.body;
+
+      if (!placeId || !intervalId) {
+        throw ErrorResponse.BadRequest('missing placeId or intervalId')
+      }
+
+      let interval = await Interval.findOne({ _id: intervalId, place: placeId });
+      if (!interval) {
+        throw ErrorResponse.NotFound('interval not found');
+      }
+
+      const isValid = validateSingleInterval(req.body);
+      const isOfferValid = await validateOffers(req.body.offers, placeId);
+
+      if (!isValid || !isOfferValid) {
+        throw ErrorResponse.BadRequest('Interval not valid: should have start, end, slots, day: (english day of week)');
+      }
+
+      if (!slotId) {
+        interval.intervals.push({
+          start: req.body.start,
+          end: req.body.end,
+          slots: req.body.slots,
+          day: req.body.day,
+          offers: req.body.offers
+        });
+        await Interval.replaceOne({ _id: intervalId }, interval);
+
+        return res.status(200).json({ message: 'added', interval: toIntervalViewModel(interval) });
+      }
+
+      interval.intervals = interval.intervals.map(interval => {
+        let id = crypto.createHash('sha1').update(`${interval.start}${interval.end}${interval.day}`).digest('hex');
+
+        if (id === slotId) {
+          interval = {
+            ...interval,
+            start: req.body.start,
+            end: req.body.end,
+            day: req.body.day,
+            slots: req.body.slots,
+            offers: req.body.offers,
+          }
+        }
+
+        return interval;
+      });
+      await Interval.replaceOne({ _id: intervalId }, interval);
+
+      return res.status(200).json({ message: 'updated', interval: toIntervalViewModel(interval) });
+    } catch (error) {
+      return next(error);
+    }
+  });
+
+  app.delete('/api/place/:id/intervals/:intervalId', async (req, res, next) => {
+    try {
+      const placeId = parseInt(req.params.id);
+      const intervalId = parseInt(req.params.intervalId);
+      const { slotId } = req.body;
+
+      if (!placeId || !intervalId || !slotId) {
+        throw ErrorResponse.BadRequest('missing parameters, required placeId, intervalId, slotId');
+      }
+
+      const interval = await Interval.findOne({ _id: intervalId, place: placeId });
+      if (!interval) {
+        throw ErrorResponse.NotFound('interval not found');
+      }
+      interval.intervals = interval.intervals.map(interval => {
+        interval._id = crypto.createHash('sha1').update(`${interval.start}${interval.end}${interval.day}`).digest("hex");
+        return interval;
+      });
+      interval.intervals = interval.intervals.filter(interval => interval._id != slotId);
+      interval.intervals = interval.intervals.map(interval => {
+        delete interval._id;
+        return interval;
+      });
+      await Interval.replaceOne({ _id: intervalId }, interval);
+
+      return res.status(200).json({ message: 'updated', interval: toIntervalViewModel(interval) });
+    } catch (error) {
+      return next(error);
+    }
+  });
+
+  
+  toIntervalViewModel = (interval) => {
+    interval.intervals = interval.intervals.map(interval => {
+      interval._id = crypto.createHash('sha1').update(`${interval.start}${interval.end}${interval.day}`).digest("hex");
+      return interval;
+    });
     return interval;
-  });
-  return interval;
-}
-validateIntervals = (intervals) => {
-   
+  }
+
+  validateIntervals = (intervals) => {
     let isValid = true;
-    if(intervals && Array.isArray(intervals)){
+    if (intervals && Array.isArray(intervals)) {
       intervals.forEach((interval) => {
         isValid = validateSingleInterval(interval);
         interval.slots = parseInt(interval.slots);
       });
-    }else{
+    } else {
       isValid = false;
     }
     return isValid;
   }
   validateOffers = async (offers, placeId) => {
-    let dBOffers =  await Offer.find({ place : placeId }).toArray();
+    const dBOffers = await Offer.find({ place: placeId }).toArray();
     let isValid = true;
-    if(offers && Array.isArray(offers) && dBOffers && Array.isArray(dBOffers)){
+    if (offers && Array.isArray(offers) && dBOffers && Array.isArray(dBOffers)) {
       offers.forEach(id => {
-        if(!dBOffers.find(offer => offer._id == id)){
+        if (!dBOffers.find(offer => offer._id === id)) {
           isValid = false;
         }
       });
-    }else{
+    } else {
       isValid = false;
     }
     return isValid;
   }
   validateSingleInterval = (interval) => {
-    let requiredProperties = ['start', 'end', 'day', 'slots'];
-    let availableDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-    let isValid = true;
-    let objectKeys = Object.keys(interval);
-    requiredProperties.forEach(key => {
-      let foundKey =  objectKeys.find(x=> x == key);
-      if(foundKey){
-        if(foundKey == 'start'){
-          if(moment(`2019-01-01 ${interval.start.replace('.',':')}`).isValid()){
-            interval.start = moment(`2019-01-01 ${interval.start.replace('.',':')}`).format('HH.mm');
-          }else{
-            isValid = false;
-          }
-        }
-        if(foundKey == 'end'){
-          if(moment(`2019-01-01 ${interval.end.replace('.',':')}`).isValid()){
-            interval.end = moment(`2019-01-01 ${interval.end.replace('.',':')}`).format('HH.mm');
-          }else{
-            isValid = false;
-          }
-        }
-        if(foundKey == 'day'){
-          if(!availableDays.find(x=> x == interval[foundKey])){
-            isValid = false;
-          }
-        }
-      }else{
-        isValid = false;
+    const requiredProperties = ['start', 'end', 'day', 'slots'];
+    const availableDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    const objectKeys = Object.keys(interval);
+
+    for (const key of requiredProperties) {
+      const foundKey = objectKeys.find(x => x === key);
+      if (!foundKey) {
+        return false;
       }
-    });
-    return isValid;
+
+      if (foundKey === 'start') {
+        if (moment(`2019-01-01 ${interval.start.replace('.', ':')}`).isValid()) {
+          interval.start = moment(`2019-01-01 ${interval.start.replace('.', ':')}`).format('HH.mm');
+        } else {
+          return false;
+        }
+      }
+
+      if (foundKey === 'end') {
+        if (moment(`2019-01-01 ${interval.end.replace('.', ':')}`).isValid()) {
+          interval.end = moment(`2019-01-01 ${interval.end.replace('.', ':')}`).format('HH.mm');
+        } else {
+          return false;
+        }
+      }
+
+      if (foundKey === 'day' && !availableDays.find(x => x === interval[foundKey])) {
+        return false;
+      }
+    }
+    return true;
   }
+}
