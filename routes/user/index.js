@@ -278,7 +278,7 @@ module.exports = (app, validate, User, Offer, Booking, Place, OfferPost, UserPay
           delete booking.place.photos;
         }
   
-        if(booking.place.socials.instagram !== undefined && booking.place.socials.instagram !== null) {
+        if((booking.place.socials || {}).instagram !== undefined && (booking.place.socials || {}).instagram !== null) {
           const match = booking.place.socials.instagram.match(/^.*instagram.com\/(.*)\/?.*/i);
           if(match) {
             booking.place.instaUser = match[1].replace('/', '');
