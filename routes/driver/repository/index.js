@@ -28,6 +28,7 @@ const newDriverRepository = (model) => ({
             picture,
             spots,
             phone,
+            lastLocation: null,
             createdAt: moment().utc().toISOString(),
           }
         },
@@ -43,6 +44,11 @@ const newDriverRepository = (model) => ({
         },
       );
     });
+  },
+
+  updateLocation: (id, latitude, longitude) => {
+    const oid = getObjectId(id);
+    return this.model.updateOne({ _id: oid }, { $set: { lastLocation: { latitude, longitude } } });
   },
 
   find: ({ id, name, car }, options) => {

@@ -36,6 +36,7 @@ const placeUtil = require('./routes/place/util');
 const bookingUtil = require('./routes/booking/util');
 const pushProvider = require('./lib/pushProvider');
 const newEntityHelper = require('./lib/entityHelper');
+const calculateDistance = require('./lib/calculateDistance');
 
 async function bootstrap() {
   Sentry.init({ dsn: config.sentryUrl });
@@ -211,6 +212,9 @@ async function bootstrap() {
     app,
     newDriverRepository(),
     newRideRepository(),
+    newUserRepository(),
+    pushProvider,
+    calculateDistance,
     newValidator(),
   );
   require('./routes/event')(

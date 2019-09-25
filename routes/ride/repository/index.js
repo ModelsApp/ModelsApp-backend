@@ -24,10 +24,20 @@ class RideRepository extends Repository {
       driver,
       arrived: false,
       stars: null,
+      arrivingNotificationSent: false,
       createdAt: moment().utc().toISOString(),
     });
 
     return result.ops[0];
+  }
+
+  async setArrivingNotification(id) {
+    const oid = this.getObjectId(id);
+    await this.model.updateOne({ _id: oid }, { $set: { arrivingNotificationSent: true } });
+  }
+
+  async getAllByDriver(driverId) {
+    return await this.model.find({ driver: driverId }).toArray();
   }
 
   async rate(id, userId, stars) {
