@@ -26,6 +26,7 @@ const driverRideRepository = require('./routes/driverRide/repository');
 const eventBookingRepository = require('./routes/eventBooking/repository');
 const rideRepository = require('./routes/ride/repository');
 const requirementRepository = require('./routes/requirement/repository');
+const offerPostsRepository = require('./routes/offer/repository/offerPost');
 
 const deleteRide = require('./routes/ride/api/deleteRide');
 const deleteEvent = require('./routes/event/api/deleteEvent');
@@ -83,10 +84,11 @@ async function bootstrap() {
   );
 
   const newRequirementRepository = () => requirementRepository(Requirement);
+  const newOfferPostRepository = () => offerPostsRepository(OfferPost);
   const newPlaceRepository = () => placeRepository(Place, newRequirementRepository());
   const newEventBookingRepository = () => eventBookingRepository(EventBooking, client, newEventRepository());
   const newActionPointsRepository = () => actionPointsRepository(ActionPoints);
-  const newUserRepository = () => userRepository(User);
+  const newUserRepository = () => userRepository(User, newOfferPostRepository());
   const newOfferRepository = () => offerRepository(Offer);
   const newBookingRepository = () => bookingRepository(Booking, newPlaceRepository());
   const newEventRepository = () => eventRepository(
@@ -146,7 +148,11 @@ async function bootstrap() {
   require('./config/authFacebook')(passport, User);
 
   require('./routes/auth')(app, User, Profile, entityHelper);
-  require('./routes/user')(app, newValidator(), User, Offer, Booking, Place, OfferPost, UserPaymentToken, entityHelper);
+  require('./routes/user')(
+    app,
+    newValidator(),
+    newUserRepository(),
+    User, Offer, Booking, Place, OfferPost, UserPaymentToken, entityHelper);
   require('./routes/admins')(app, User, Place, Offer, OfferPost, Booking, OfferPostArchive);
   require('./routes/client')(app, User, Place, Offer, Counter, Booking, OfferPost, Interval, SamplePost);
   require('./routes/offer')(

@@ -3,19 +3,32 @@ const Repository = require('./../../../core/repository');
 const ErrorResponse = require('./../../../core/errorResponse');
 
 class UserRepository extends Repository {
-  constructor(model) {
+  constructor(model, offerPostsRepository) {
     super(model);
+    this.offerPostsRepository = offerPostsRepository;
   }
 
-  findOne (id) {
+  findOne(id) {
     return this.model.findOne({ _id: id });
   }
 
-  findById (id) {
+  findById(id) {
     return this.model.findOne({ _id: id });
   }
 
-  async findOneAndUpdateAction (id, actionType, options = {}) {
+  findPaginatedUsers(limit, page, properties) {
+    const projection = this.buildProjection(properties);
+    const query = this.model.find({}, { projection });
+    if (limit && page) {
+      query.skip(limit*(page+1))
+        .limit(limit)
+        .sort({ _id: 1 })
+    }
+
+    return query.toArray();
+  }
+
+  async findOneAndUpdateAction(id, actionType, options = {}) {
     const user = await this.model.findOne({ _id: id });
     if (!user) {
       return null;
@@ -41,7 +54,7 @@ class UserRepository extends Repository {
     return updatedUser.value;
   }
 
-  subtractCredits (user, credits) {
+  subtractCredits(user, credits) {
     if (!(user.credits >= credits)) {
       throw ErrorResponse.Unauthorized('Not enough credits');
     }
@@ -52,7 +65,7 @@ class UserRepository extends Repository {
     return this.model.updateOne({ _id: user._id }, { $inc: { credits: toPay }});
   }
 
-  addCredits (user, credits) {
+  addCredits(user, credits) {
     let toPay = credits;
     if (toPay < 0) {
       toPay = -toPay;
@@ -60,9 +73,16 @@ class UserRepository extends Repository {
     return this.model.updateOne({ _id: user._id }, { $inc: { credits: toPay }});
   }
 
-  findByDriverId (driverId) {
+  findByDriverId(driverId) {
     return this.model.findOne({ driver: driverId });
+  }
+
+  async joinOfferPosts(user, limit) {
+    return {
+      ...user,
+      offerPosts: await this.offerPostsRepository.findByUserId(user._id, limit),
+    }
   }
 }
 
-module.exports = (model) => new UserRepository(model);
+module.exports = (model, offerPostsRepository) => new UserRepository(model, offerPostsRepository);

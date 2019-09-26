@@ -697,10 +697,19 @@ module.exports = (
     }
   });
 
-  // Get all OfferPosts
   app.get('/api/offerPosts', async (req, res, next) => {
     try {
-      const posts = await OfferPost.find({}).toArray();
+      let { limit = 10, page = 1 } = req.query;
+      limit = parseInt(limit);
+      page = parseInt(page);
+
+      const posts = await OfferPost
+        .find({})
+        .skip(limit*(page+1))
+        .limit(limit)
+        .sort({ _id: 1 })
+        .toArray();
+
       return res.status(200).json(posts);
     } catch (error) {
       return next(error);

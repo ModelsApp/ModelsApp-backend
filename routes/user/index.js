@@ -14,7 +14,7 @@ const newEditUserAdminSchema = require('./schema/editUserAdmin');
 const ErrorResponse = require('./../../core/errorResponse');
 const { SUBSCRIPTION } = require('./../../config/constant');
 
-module.exports = (app, validate, User, Offer, Booking, Place, OfferPost, UserPaymentToken, getNewId) => {
+module.exports = (app, validate, userRepository, User, Offer, Booking, Place, OfferPost, UserPaymentToken, getNewId) => {
 
   // Get the current (authenticated) User
   app.get('/api/user/current', middleware.isAuthorized, async (req, res, next) => {
@@ -329,34 +329,24 @@ module.exports = (app, validate, User, Offer, Booking, Place, OfferPost, UserPay
     }
   });
 
-  // Get the offerPosts belonging to specific User
-  app.get('/api/user/:id/offerPosts', async (req, res, next) => {
-    try {
-      const id = parseInt(req.params.id);
-      if (!id) {
-        throw ErrorResponse.BadRequest('provide valid id');
-      }
-      const posts = await OfferPost.find({ user: id }).toArray();
-      const user = await User.findOne({ _id: id }, { projection: { photo: 1, credits: 1, name: 1 }});
-
-      return res.status(200).json({ posts: posts, user: user });
-    } catch (error) {
-      return next(error);
-    }
-  });
-
-  // Get all Users Offer Post with a good structure
   app.get('/api/users/offerPosts', async (req, res, next) => {
     try {
-      const users = await User.find({
-        'offerPosts.0': { $exists: true } },
-        { projection: { credits: 1, photo: 1, name: 1, surname: 1 }}).toArray();
-      const full = await Promise.all(users.map(async (user) => ({
-        ...user,
-        posts: await OfferPost.find({ user: user._id }).toArray(),
-      })));
+      let { limit = 10, page = 1, userId } = req.query;
 
-      return res.status(200).json(full);  
+      if (userId) {
+        userId = parseInt(userId);
+        let user = await userRepository.findById(userId);
+        user = await userRepository.joinOfferPosts(user, false);
+
+        return res.status(200).json(user);
+      }
+      limit = parseInt(limit);
+      page = parseInt(page);
+
+      let users = await userRepository.findPaginatedUsers(limit, page, ['_id', 'name', 'email', 'level', 'photo']);
+      users = await Promise.all(users.map(user => userRepository.joinOfferPosts(user, 5)));
+
+      return res.status(200).json(users);
     } catch (error) {
       return next(error);
     }

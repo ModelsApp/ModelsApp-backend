@@ -19,6 +19,10 @@ class Repository {
     return oid;
   }
 
+  buildProjection(properties) {
+    return properties.reduce((acc, property) => ({ ...acc, [property]: 1 }), {});
+  }
+
   async _addToArray(id, field, value) {
     const oid = this.getObjectId(id);
     if (!oid) {
