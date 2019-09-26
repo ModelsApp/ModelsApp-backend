@@ -1,6 +1,7 @@
 const _ = require('lodash');
 const moment = require('moment');
 const multiparty = require('multiparty');
+const crypto = require('crypto');
 
 const middleware = require('../../config/authMiddleware');
 const imageUploader = require('../../lib/imageUplader');
@@ -13,6 +14,7 @@ const ErrorResponse = require('./../../core/errorResponse');
 const { ACCESS } = require('./constant');
 const { GENDERS } = require('./../user/constant');
 const { BOOKING_LIMIT_PERIODS } = require('./constant');
+const sendGrid = require('../../lib/sendGrid');
 
 module.exports = (
   app,
@@ -272,6 +274,40 @@ module.exports = (
       const extendedData = await getMoreData(places);
     
       return res.status(200).json(extendedData); 
+    } catch (error) {
+      return next(error);
+    }
+  });
+
+  app.post('/api/place/client/forgotPassword', async (req, res, next) => {
+    try {
+      const { email } = req.body;
+      if (!email) throw ErrorResponse.BadRequest('provide email');
+
+      const place = await placeRepository.findByClientEmail(email);
+      if (!place) throw ErrorResponse.NotFound('given email is not registered');
+
+      const temporaryPassword = crypto.randomBytes(2).toString('hex');
+      await placeRepository.setClientTempPass(place._id, temporaryPassword);
+
+      await sendGrid.sendForgotPasswordEmail(temporaryPassword, { email });
+
+      return res.status(200).json({ message: `an email with instructions was sent to ${email}` });
+    } catch (error) {
+      return next(error);
+    }
+  });
+
+  app.post('/api/place/client/changePassword', middleware.isClient, async (req, res, next) => {
+    try {
+      const place = await req.user;
+      const { password, confirmPassword } = req.body;
+      if (!password || !confirmPassword || password !== confirmPassword) {
+        throw ErrorResponse.BadRequest('passwords dont match');
+      }
+      await placeRepository.setClientPass(place._id, password);
+
+      return res.status(200).json({ message: 'password has been updated' });
     } catch (error) {
       return next(error);
     }

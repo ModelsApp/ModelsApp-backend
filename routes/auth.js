@@ -100,9 +100,9 @@ module.exports = (app, User, Profile, getNewId) => {
         } else {
           var accessToken = token.generateAccessToken(user._id);
           if (!accessToken) {
-            res.json({ message: "Registration failed", token: null });
+            res.json({ message: "Sign in failed", token: null });
           } else {
-            res.json({ message: "Registration completed", token: accessToken, _id : user._id  });
+            res.json({ message: "Signed in", token: accessToken, _id : user._id  });
           }
         }
       })(req, res, next);

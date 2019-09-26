@@ -401,6 +401,9 @@ module.exports = (app, validate, userRepository, User, Offer, Booking, Place, Of
     try {
       const user = await req.user;
       const { password, confirmPassword } = req.body;
+      if (!user.temporaryPassword) {
+        throw ErrorResponse.Unauthorized();
+      }
       if (!password || !confirmPassword || password !== confirmPassword) {
         throw ErrorResponse.BadRequest('passwords dont match');
       }

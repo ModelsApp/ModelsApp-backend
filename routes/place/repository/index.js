@@ -1,3 +1,5 @@
+const bcrypt = require('bcrypt-nodejs');
+
 const newPlaceRepository = (model, requirementRepository) => ({
   findOne: (id) => {
     return model.findOne({ _id: id });
@@ -38,6 +40,35 @@ const newPlaceRepository = (model, requirementRepository) => ({
             value,
         }))),
     };
+  },
+
+  findByClientEmail: (email) => {
+    return model.findOne({ 'client.email': email });
+  },
+
+  setClientTempPass: (placeId, temporaryPassword) => {
+    return model.updateOne(
+      {
+        _id: placeId,
+      },
+      { $set: { 'client.temporaryPassword': bcrypt.hashSync(temporaryPassword, bcrypt.genSaltSync(8), null) } }, 
+      { new: true, returnOriginal: false },
+    );
+  },
+
+  setClientPass: (placeId, password) => {
+    return model.updateOne(
+      {
+        _id: placeId,
+      },
+      {
+        $set: {
+          'client.temporaryPassword': null,
+          'client.password': password,
+        },
+      }, 
+      { new: true, returnOriginal: false },
+    );
   }
 });
 

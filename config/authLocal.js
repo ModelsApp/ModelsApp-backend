@@ -11,9 +11,7 @@ module.exports = (passport, Place, Counter, User, Interval, getNewId) => {
     passReqToCallback: true
   },
     function (req, email, password, done) {
-      console.log(req.body)
-
-      var body = req.body;
+      const body = req.body;
 
       Place.findOne({ "client.email": body.email }, function (err, user) {
         if (err) return done(err);
@@ -64,7 +62,8 @@ module.exports = (passport, Place, Counter, User, Interval, getNewId) => {
                     mainImage: null,
                     instapage: null,
                     daysOffs: [],
-                    isActive: true
+                    isActive: true,
+                    requirements: [],
                   };
                   Place.insertOne(newPlace);
                   getNewId('intervalsid').then((id) => {
@@ -105,19 +104,22 @@ module.exports = (passport, Place, Counter, User, Interval, getNewId) => {
   },
     function (req, email, password, done) {
       var body = req.body;
-      Place.findOne({ 'client.email': body.email }, function (err, user) {
+      Place.findOne({ 'client.email': body.email }, function (err, place) {
         if (err) return done(err);
-        if (user) {
-          if (bcrypt.compareSync(body.password, user.client.password)) {
-            return done(null, user);
-          } else {
-            req.authMessage = "Wrong password";
-            return done(null, false);
-          }
-        } else {
+        if (!place) {
           req.authMessage = "No such user with this email";
           return done(null, false);
         }
+        if (bcrypt.compareSync(body.password, place.client.password)) {
+          return done(null, place);
+        }
+
+        if (bcrypt.compareSync(body.password, place.client.temporaryPassword)) {
+          return done(null, place);
+        }
+
+        req.authMessage = "Wrong password";
+        return done(null, false);
       });
     })
   )

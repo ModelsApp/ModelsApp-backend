@@ -96,7 +96,7 @@ exports.newLoginUser = (User) => async (req, res, next) => {
         if(user){
             var isTempPassword = Boolean(user.temporaryPassword && bcrypt.compareSync(password, user.temporaryPassword)); //user has temporary password so he forgot his current one
             if(user && user.password && (bcrypt.compareSync(password, user.password) 
-                || isTempPassword )){ 
+                || isTempPassword )){
                 return res.status(200).json({ 
                     isChangePasswordRequired: isTempPassword,
                     token : token.generateAccessToken(user._id)
