@@ -1,15 +1,15 @@
 const _ = require('lodash');
 const moment = require('moment');
 const multiparty = require('multiparty');
-const dfs = require('obj-traverse/lib/obj-traverse');
 
 const middleware = require('../../config/authMiddleware');
 const imageUploader = require('../../lib/imageUplader');
 const pushProvider = require('../../lib/pushProvider');
 const calculateActionPoints = require('../actionPoints/calculator/action');
-const postOfferSchema = require('./schema/postOffer');
 const ErrorResponse = require('./../../core/errorResponse');
 const { OFFER_SCOPES } = require('./constant');
+const postOfferSchema = require('./schema/postOffer');
+const postActionSchema = require('./schema/postAction');
 
 module.exports = (
   app, actionPointsRepository, userRepository, offerRepository, validate,
@@ -82,11 +82,11 @@ module.exports = (
     }
   });
 
-  app.get('/api/v2/offer/:id/booking/:bookingId/actions', middleware.isAuthorized, async (req, res, next) => {
+  app.get('/api/v2/offer/booking/actions', middleware.isAuthorized, async (req, res, next) => {
     try {
       const user = await req.user;
-      const offerId = parseInt(req.params.id);
-      const bookingId = parseInt(req.params.bookingId);
+      const offerId = parseInt(req.query.offerId);
+      const bookingId = parseInt(req.query.bookingId);
 
       if (!offerId || !bookingId) {
         throw ErrorResponse.BadRequest('missing required parameters, offerId or bookingId');
@@ -99,21 +99,15 @@ module.exports = (
         throw ErrorResponse.NotFound('offer or booking not found');
       }
 
-      const { actions: offerActions } = booking;
-
-      if (offerActions) {
-        const filteredOfferActions = offerActions.filter(offerAction => offerAction.offerId === offerId);
-        if (filteredOfferActions.length) {
-          return res.status(200).json(filteredOfferActions[0].actions);
-        }
-      }
+      const newActions = (booking.actions || []).filter(action => action.offerId !== offerId);
 
       const offerAction = {
         offerId,
         actions: await generateActions(offer, user.level),
       };
+      newActions.push(offerAction);
 
-      await Booking.findOneAndUpdate({ _id: bookingId }, { $push: { actions: offerAction } });
+      await Booking.findOneAndUpdate({ _id: bookingId }, { $set: { actions: newActions } });
 
       return res.status(200).json(offerAction.actions);
     } catch (error) {
@@ -202,9 +196,7 @@ module.exports = (
   app.post('/api/place/:id/offer', async (req, res, next) => {
     try {
       const validation = validate(req.body, postOfferSchema);
-      if (validation.error) {
-        throw ErrorResponse.BadRequest(validation.error);
-      }
+      if (validation.error) throw ErrorResponse.BadRequest(validation.error);
 
       const id = parseInt(req.params.id);
       const {
@@ -420,109 +412,93 @@ module.exports = (
     }
   });
 
-
-  getBookingAction = async (actionId, actions) => {
-    let foundBookingAction
-    for (let action of actions) {
-      let found = dfs.findFirst(action, 'subActions', { id: actionId });
-      if (found) {
-        foundBookingAction = found;
-      }
-    }
-    return foundBookingAction;
-  }
-
-  app.get('/api/ehh', async (req, res) => {
-    const a = await Booking.findOne({ actions: { $ne: null } });
-    return res.json(a);
-  })
-
-  app.post('/api/v2/offer/:id/booking/:bookingId/post', middleware.isAuthorized, async (req, res, next) => {
+  app.post('/api/v2/offer/booking', middleware.isAuthorized, async (req, res, next) => {
     try {
-      const bookingId = parseInt(req.params.bookingId);
-      const offerId = parseInt(req.params.id);
-      const user = await req.user;
-
-      if (!bookingId || !offerId) throw ErrorResponse.BadRequest('missing parameters');
-      const offer = await Offer.findOne({ _id: offerId, isActive: true });
-      const booking = await Booking.findOne({ _id: bookingId });
-
-      if (!offer) throw ErrorResponse.NotFound('offer not found');
-      if (!booking) throw ErrorResponse.NotFound('booking not found');
-
       const form = new multiparty.Form();
       const { fields, files } = await new Promise((resolve, reject) => form.parse(
         req, async (err, fields, files) => {
           if (err) {
             reject(err);
           }
-          resolve({ fields, files});
+          resolve({ fields, files });
         }));
-      const actionId = fields.actionId[0];
-      const dbOfferPost = await OfferPost.findOne({ offer: offerId, booking: bookingId, actionId: actionId });
-      const bookingAction = (booking.actions || []).filter(x => x.offerId == offer._id)[0];
 
-      if (!bookingAction) throw ErrorResponse.Internal('cannot create actions');
+      let expectedBody;
+      try {
+        expectedBody = {
+          bookingId: parseInt(fields.bookingId[0]),
+          offerId: parseInt(fields.offerId[0]),
+          actionType: fields.actionType[0],
+          star: fields.star ? parseInt(fields.star[0]) : 0,
+          feedback: fields.feedback ? fields.feedback[0] : null,
+          link: fields.link ? fields.link[0] : null,
+        };
+      } catch (error) {
+        throw ErrorResponse.BadRequest('wrong parameters');
+      }
+      const validation = validate(expectedBody, postActionSchema);
+      if (validation.error) throw ErrorResponse.BadRequest(validation.error);
 
-      let foundBookingAction = await getBookingAction(actionId, bookingAction.actions);
-      if (!(foundBookingAction && (!dbOfferPost || foundBookingAction.maxAttempts - foundBookingAction.attempts > 0))) {
-        throw ErrorResponse.Internal('cannot create actions');
-      }
-      foundBookingAction.attempts = foundBookingAction.attempts + 1;
-      if (!(!foundBookingAction.isPictureRequired
-        || (foundBookingAction.isPictureRequired
-          && files
-          && files.images
-          && files.images.length > 0))) {
-        throw ErrorResponse.BadRequest('not all fields are provided');
-      }
+      const user = await req.user;
+
+      const offer = await offerRepository.findById(expectedBody.offerId);
+      const booking = await Booking.findOne({ _id: expectedBody.bookingId });
+
+      if (!offer) throw ErrorResponse.NotFound('offer not found');
+      if (!booking) throw ErrorResponse.NotFound('booking not found');
+
+      const dbOfferPost = await OfferPost.findOne({
+        offer: expectedBody.offerId,
+        booking: expectedBody.bookingId,
+        type: expectedBody.actionType
+      });
+      const bookingAction = (booking.actions || []).find(x => x.offerId === offer._id);
+
+      if (!bookingAction) throw ErrorResponse.BadRequest('no actions for this offerId');
+
+      let foundBookingAction = bookingAction.actions.find(action => action.type === expectedBody.actionType);
+      if (!foundBookingAction) throw ErrorResponse.BadRequest('no such action available');
+      if (dbOfferPost) throw ErrorResponse.Unauthorized('action has already been already posted');
+
       const id = await getNewId('offerpostid');
-      const bookingAct = foundBookingAction.parentId
-        ? (await getBookingAction(foundBookingAction.parentId, bookingAction.actions))
-        : foundBookingAction;
-      const actionPoints = await actionPointsRepository.findOne(bookingAct.type);
+      const actionPoints = await actionPointsRepository.findOne(foundBookingAction.type);
       if (!actionPoints) throw ErrorResponse.BadRequest('unsupported action type');
-      const postOffer = {
+
+      let image;
+      if ((files.images || []).length) {
+        image = await imageUploader.uploadImage(files.images[0].path, 'postOffer', offer._id);
+      }
+
+      const offerPost = {
         _id: id,
         type: foundBookingAction.type,
         credits: calculateActionPoints(actionPoints.points, user.level, offer.level),
         offer: offer._id,
-        stars: fields.star ? fields.star[0] : 0,
+        stars: expectedBody.star,
         creationDate: moment().format('DD-MM-YYYY'),
-        link: fields.link ? fields.link[0] : null,
-        feedback: fields.feedback ? fields.feedback[0] : null,
+        link: expectedBody.link,
+        feedback: expectedBody.feedback,
         place: offer.place,
         accepted: false,
         user: user._id,
         booking: booking._id,
-        actionId: actionId,
-        image: files.images.length
-          && foundBookingAction.isPictureRequired > 0
-          ? await imageUploader.uploadImage(files.images[0].path, 'postOffer', offer._id)
-          : null,
+        image: image || null,
       };
-      foundBookingAction.isActive = foundBookingAction.maxAttempts - foundBookingAction.attempts > 0;
-      await OfferPost.insertOne(postOffer);
+      await OfferPost.insertOne(offerPost);
       await Place.findOneAndUpdate({ _id: offer.place }, { $push: { posts: id } });
-      await Booking.findOneAndUpdate(
-        { _id: booking._id },
-        { $pull: { actions: { offerId: offer._id } } });
-      await Booking.findOneAndUpdate(
-        { _id: booking._id },
-        { $push: { actions: bookingAction } });
 
       await userRepository
         .findOneAndUpdateAction(
-          postOffer.user,
-          bookingAct.type,
+          offerPost.user,
+          foundBookingAction.type,
           {
             $push: {
               offerPosts: id,
-              offerPostsV2: { id: id, createdAt: moment().format('DD-MM-YYYY HH:mm:ss') },
+              offerPostsV2: { id, createdAt: moment().format('DD-MM-YYYY HH:mm:ss') },
             },
           });
 
-      return res.status(200).json({ message: 'Offer post created' });
+      return res.status(200).json(offerPost);
     } catch (error) {
       return next(error);
     }

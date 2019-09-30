@@ -365,7 +365,7 @@ class BookingUtil {
   }
 
   async addOfferToBooking(bookingId, offerId) {
-    const book = await this.Booking.findOneAndUpdate({ _id: bookingId }, { $push: {offers: offerId} });
+    const book = await this.Booking.findOneAndUpdate({ _id: bookingId }, { $push: { offers: offerId } });
     if (!book.value) {
       throw new Error('No such booking');
     }

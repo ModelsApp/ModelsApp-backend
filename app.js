@@ -194,7 +194,6 @@ async function bootstrap() {
   require('./routes/campains/campaigns')(app, User, Campaign, UserCampaign, CampaignInterval, entityHelper);
   require('./routes/campains/userCampaigns')(app, Campaign, UserCampaign, User, entityHelper);
   require('./routes/campains/campaignsIntervals')(app, Campaign, CampaignInterval, UserCampaign, entityHelper);
-  require('./routes/config')(app, Offer);
   require('./routes/actionPoints')(app, newActionPointsRepository(), newValidator());
   require('./routes/placeType')(app, newPlaceTypeRepository(), newValidator());
   require('./routes/placeExtra')(
