@@ -39,14 +39,14 @@ const newActionPointsRepository = (model) => ({
       });
   },
 
-  updateOrCreate(provider, points) {
+  updateOrCreate(provider, points, image) {
     return new Promise((resolve, reject) => {
       model.findOneAndUpdate(
         {
           provider,
         },
         {
-          $set: { provider, points }
+          $set: { provider, points, image }
         },
         {
           returnOriginal: false,

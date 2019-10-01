@@ -8,11 +8,11 @@ module.exports = (app, actionPointsRepository, validate) => {
       return res.status(400).json({ message: validation.error });
     }
 
-    const { provider, points } = req.body;
+    const { provider, points, image } = req.body;
     let result;
 
     try {
-      result = await actionPointsRepository.updateOrCreate(provider, points);
+      result = await actionPointsRepository.updateOrCreate({ provider, points, image });
     } catch (error) {
       return res.status(500).json({ message: 'Something went wrong' });
     }

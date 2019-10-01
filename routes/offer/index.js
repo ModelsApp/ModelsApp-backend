@@ -173,6 +173,7 @@ module.exports = (
         displayName: getAvailableActionTypes()[x],
         type: x,
         credits: actionPoints ? calculateActionPoints(actionPoints.points, userLevel, offer.level) : null,
+        image: (actionPoints || {}).image || null,
         active: true,
       };
     });
