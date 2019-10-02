@@ -169,14 +169,17 @@ module.exports = (
 
     return offerCreditsArray.map(x => {
       const actionPoints = actionPointsProviders.find(ap => ap.provider === x);
+      if (!actionPoints) {
+        return null;
+      }
       return {
         displayName: getAvailableActionTypes()[x],
         type: x,
-        credits: actionPoints ? calculateActionPoints(actionPoints.points, userLevel, offer.level) : null,
+        credits: calculateActionPoints(actionPoints.points, userLevel, offer.level),
         image: (actionPoints || {}).image || null,
         active: true,
       };
-    });
+    }).filter(y => y);
   }
 
   app.get('/api/offer/:id/actions', middleware.isAuthorized, async (req, res, next) => {
