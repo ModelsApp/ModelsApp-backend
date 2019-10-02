@@ -35,6 +35,31 @@ module.exports = (app, placeRepository, userRepository, bookingRepository, event
     }
   });
 
+  app.get('/api/booking', middleware.isAuthorized, async (req, res, next) => {
+    try {
+      let ids = req.query.id;
+      if (!Array.isArray(req.params.id)) {
+        ids = [ids];
+      }
+      ids = ids.map(id => parseInt(id)).filter(id => id);
+
+      const user = await req.user;
+
+      let bookings;
+      if (!ids.length) {
+        bookings = await bookingRepository.findAllUserBookings(user._id);
+      } else {
+        bookings = (await bookingRepository
+          .findManyByIds(ids))
+          .filter(booking => booking.user === user._id);
+      }
+
+      return res.status(200).json(bookings);
+    } catch (error) {
+      return next(error);
+    }
+  });
+
   app.get('/api/booking/my-bookings', middleware.isAuthorized, async (req, res, next) => {
     try {
       const user = await req.user;

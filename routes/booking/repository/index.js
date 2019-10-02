@@ -23,6 +23,10 @@ const newBookingRepository = (model, placeRepository) => ({
     return model.find({ user: userId }, { eventBooking: false }).toArray();
   },
 
+  findAllUserBookings: (userId) => {
+    return model.find({ user: userId }).toArray();
+  },
+
   joinPlace: async (booking) => {
     return {
       ...booking,
