@@ -46,7 +46,7 @@ module.exports = (
 
       return res.status(status).json(message)
     } catch (error) {
-      next(error);
+      return next(error);
     }
   });
 
@@ -133,7 +133,7 @@ module.exports = (
 
       return res.status(status).json(message)
     } catch (error) {
-      next(error);
+      return next(error);
     }
   });
 
@@ -161,7 +161,7 @@ module.exports = (
   
       return res.status(200).json({ message: 'Event unbooked' });
     } catch (error) {
-      next(error);
+      return next(error);
     }
   });
 
@@ -181,7 +181,7 @@ module.exports = (
   
       return res.status(200).json(bookings);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   });
 };
