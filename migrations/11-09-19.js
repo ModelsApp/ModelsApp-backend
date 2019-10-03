@@ -19,7 +19,7 @@ module.exports = (app, User, Place, Offer, Counter, Booking, OfferPost, Interval
     a = await Booking.find({}).toArray();
 
     ps = await Promise.all(a.map(async (el) => {
-      await Booking.replaceOne({ _id: el._id }, { ...el, eventBooking: false });
+      await Booking.replaceOne({ _id: el._id }, { ...el, eventId: null });
     }));
     console.log('3');
     
@@ -67,7 +67,7 @@ module.exports = (app, User, Place, Offer, Counter, Booking, OfferPost, Interval
     await Offer.updateMany({}, { $unset: { isActive: '' } });
     await Offer.updateMany({}, { $unset: { scopes: '' } });
 
-    await Booking.updateMany({}, { $unset: { eventBooking: '' } });
+    await Booking.updateMany({}, { $unset: { eventId: '' } });
 
     await Promise.all(a.map(async (el) => {
       el.creationDate = moment(el.creationDate).format('DD-MM-YYYY');

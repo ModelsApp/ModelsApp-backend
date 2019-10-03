@@ -20,7 +20,7 @@ const newBookingRepository = (model, placeRepository) => ({
   },
 
   findAllRegularBookingsForUser: (userId) => {
-    return model.find({ user: userId }, { eventBooking: false }).toArray();
+    return model.find({ user: userId }, { eventId: null }).toArray();
   },
 
   findAllUserBookings: (userId) => {

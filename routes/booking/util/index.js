@@ -96,7 +96,7 @@ class BookingUtil {
     return { fullDate, offers, chosenInterval, place };
   }
 
-  async book(id, userID, fullDate, offers, chosenInterval, place, eventBooking = false) {
+  async book(id, userID, fullDate, offers, chosenInterval, place, eventId) {
     if (!place.isActive) {
       throw ErrorResponse.Unauthorized('Cannot book inactive place');
     }
@@ -116,7 +116,7 @@ class BookingUtil {
       payed: Math.min(...offers.map(x => x.price)) / 2,
       startTime: chosenInterval.start,
       endTime: chosenInterval.end,
-      eventBooking,
+      eventId: eventId || null,
     }
     const booking = await this.Booking.insertOne(newBooking);
     await this.User.findOneAndUpdate({_id: newBooking.user}, {
@@ -256,7 +256,7 @@ class BookingUtil {
         $gte: startMonth,
         $lt: endMonth,
       },
-      eventBooking: false,
+      eventId: null,
     }).toArray();
 
     const numBookings = recentUserBookings.length;

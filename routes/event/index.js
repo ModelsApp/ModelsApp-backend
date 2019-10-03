@@ -158,5 +158,30 @@ module.exports = (app, eventRepository, placeRepository, requirementRepository, 
 
     return res.status(200).json(event);
   });
+
+  app.get('/api/event/placeOffers', middleware.isAuthorized, async (req, res, next) => {
+    try {
+      const { eventId } = req.query;
+      const placeId = parseInt(req.query.placeId);
+
+      let placesOffers;
+      if (!eventId) {
+        return res.status(200).json([]);
+      }
+      
+      const event = await eventRepository.findById(eventId);
+      placesOffers = event.placesOffers;
+
+      if (req.query.placeId) {
+        placesOffers = placesOffers.find(placeOffer => placeOffer.placeId === placeId)
+        if (!placesOffers) return res.status(200).json([]);
+        placesOffers = [placesOffers];
+      }
+
+      return res.status(200).json(placesOffers);
+    } catch (error) {
+      return next(error);
+    }
+  });
 };
 

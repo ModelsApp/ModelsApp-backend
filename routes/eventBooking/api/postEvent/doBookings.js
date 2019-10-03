@@ -28,6 +28,7 @@ const doBookings = async (event, userId, bookings, bookingUtil) => {
       details.offers,
       details.chosenInterval,
       details.place,
+      event._id,
     );
     for (const offerId of details.booking.offerIds) {
       await bookingUtil.addOfferToBooking(booking._id, offerId);
