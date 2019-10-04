@@ -16,7 +16,15 @@ const getObjectId = (id) => {
 }
 
 class EventRepository extends Repository {
-  constructor(model, client, requirementRepository, placeRepository, offerRepository, intervalRepository, bookUtil) {
+  constructor(
+    model,
+    client,
+    requirementRepository,
+    placeRepository,
+    offerRepository,
+    intervalRepository,
+    bookUtil,
+  ) {
     super(model, client);
     this.requirementRepository = requirementRepository;
     this.placeRepository = placeRepository;
@@ -25,7 +33,15 @@ class EventRepository extends Repository {
     this.bookUtil = bookUtil;
   }
 
-  async insertOne ({ placeId, requirements, placesOffers, timeframe, baseCredits, level }) {
+  async insertOne ({
+    placeId,
+    requirements,
+    placesOffers,
+    timeframe,
+    baseCredits,
+    level,
+    eventOffers,
+  }) {
     if (timeframe) {
       timeframe.start = moment(timeframe.start).toISOString();
       timeframe.end = moment(timeframe.end).toISOString();
@@ -39,13 +55,14 @@ class EventRepository extends Repository {
       participants: [],
       baseCredits,
       level,
+      eventOffers,
       createdAt: moment().utc().toISOString(),
     });
 
     return result.ops[0];
   }
 
-  async updateOne(id, { requirements, placesOffers, timeframe, placeId }) {
+  async updateOne(id, { requirements, placesOffers, timeframe, placeId, eventOffers }) {
     const oid = getObjectId(id);
     const result = await this.model.findOneAndUpdate(
       {
@@ -57,6 +74,7 @@ class EventRepository extends Repository {
           ...(timeframe && { timeframe }),
           ...(placesOffers && { placesOffers }),
           ...(placeId && { placeId }),
+          ...(eventOffers && { eventOffers }),
         }
       },
       {

@@ -29,6 +29,7 @@ class BookingUtil {
   
   async getPlaceIntervals(placeId) {
     const interval = await this.Interval.findOne({ place: placeId });
+    if (!interval) return [];
     const intervals = interval.intervals.map((interval) => {
       interval._id = crypto.createHash('sha1').update(`${interval.start}${interval.end}${interval.day}`).digest("hex");
       return interval;

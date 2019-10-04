@@ -11,6 +11,7 @@ const newSchema = (requirements, intervalIds) => Joi.object().keys({
   timeframe,
   baseCredits: Joi.number().integer().strict().required(),
   level: Joi.number().integer().strict(),
+  eventOffers: Joi.array().items(Joi.string().strict()).required(),
 });
 
 module.exports = newSchema;

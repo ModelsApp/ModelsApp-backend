@@ -27,6 +27,7 @@ const eventBookingRepository = require('./routes/eventBooking/repository');
 const rideRepository = require('./routes/ride/repository');
 const requirementRepository = require('./routes/requirement/repository');
 const offerPostsRepository = require('./routes/offer/repository/offerPost');
+const eventOfferRepository = require('./routes/eventOffer/repository');
 
 const deleteRide = require('./routes/ride/api/deleteRide');
 const deleteEvent = require('./routes/event/api/deleteEvent');
@@ -69,6 +70,7 @@ async function bootstrap() {
   const UserPaymentToken = db.collection('userPaymentTokens');
   const Campaign = db.collection('campaigns');
   const UserCampaign = db.collection('userCampaigns');
+  const EventOffer = db.collection('eventOffer');
   const CampaignInterval = db.collection("campaignIntervals");
 
   const entityHelper = newEntityHelper(Counter);
@@ -83,6 +85,7 @@ async function bootstrap() {
     entityHelper,
   );
 
+  const newEventOfferRepository = () => eventOfferRepository(EventOffer);
   const newRequirementRepository = () => requirementRepository(Requirement);
   const newOfferPostRepository = () => offerPostsRepository(OfferPost);
   const newPlaceRepository = () => placeRepository(Place, newRequirementRepository());
@@ -227,6 +230,7 @@ async function bootstrap() {
     newEventRepository(),
     newPlaceRepository(),
     newRequirementRepository(),
+    newEventOfferRepository(),
     newDeleteEvent(),
     newBookingUtil(),
     newValidator(),
@@ -248,6 +252,11 @@ async function bootstrap() {
     newUserRepository(),
     newBookingUtil(),
     newDeleteRide(),
+    newValidator(),
+  );
+  require('./routes/eventOffer')(
+    app,
+    newEventOfferRepository(),
     newValidator(),
   );
   require('./routes/ride')(
