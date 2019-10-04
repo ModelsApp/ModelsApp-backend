@@ -103,7 +103,7 @@ module.exports = (
 
       const offerAction = {
         offerId,
-        actions: await generateActions(offer, user.level),
+        actions: await generateActions(offer, user.level, user._id),
       };
       newActions.push(offerAction);
 
@@ -142,7 +142,7 @@ module.exports = (
       // first appearance so we need to create available actions
       const offerAction = {
         offerId: offerId,
-        actions: await generateActions(offer, user.level),
+        actions: await generateActions(offer, user.level, user._id),
       };
       await Booking.findOneAndUpdate({ _id: bookingId }, { $push: { offerActions: offerAction } });
       return res.status(200).json(offerAction.actions);
@@ -162,22 +162,27 @@ module.exports = (
     };
   }
 
-  async function generateActions(offer, userLevel) {
+  async function generateActions(offer, userLevel, userId) {
     const { credits } = offer;
     const actionPointsProviders = await actionPointsRepository.find();
     const offerCreditsArray = Array.from(Object.keys(credits));
 
+    const posts = await OfferPost.find({ offer: offer._id }).toArray();
+
     return offerCreditsArray.map(x => {
       const actionPoints = actionPointsProviders.find(ap => ap.provider === x);
+      let active = true;
       if (!actionPoints) {
         return null;
       }
+      if (posts && posts.find(post => post.type === x)) active = false;
+
       return {
         displayName: getAvailableActionTypes()[x],
         type: x,
         credits: calculateActionPoints(actionPoints.points, userLevel, offer.level),
         image: (actionPoints || {}).image || null,
-        active: true,
+        active: !posts.find(post => post.user === userId && post.type === x),
       };
     }).filter(y => y);
   }
@@ -188,7 +193,7 @@ module.exports = (
       const id = parseInt(req.params.id);
 
       const offer = await Offer.findOne({ _id: id, isActive: true });
-      const actions = await generateActions(offer, user.level);
+      const actions = await generateActions(offer, user.level, user._id);
 
       return res.status(200).json(actions);
     } catch (error) {
@@ -462,7 +467,7 @@ module.exports = (
 
       let foundBookingAction = bookingAction.actions.find(action => action.type === expectedBody.actionType);
       if (!foundBookingAction) throw ErrorResponse.BadRequest('no such action available');
-      if (dbOfferPost) throw ErrorResponse.Unauthorized('action has already been already posted');
+      if (dbOfferPost) throw ErrorResponse.Unauthorized('action has already been posted');
 
       const id = await getNewId('offerpostid');
       const actionPoints = await actionPointsRepository.findOne(foundBookingAction.type);
