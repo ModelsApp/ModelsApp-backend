@@ -672,6 +672,25 @@ module.exports = (
     }
   });
 
+  function rangesOverlap(start1, end1, start2, end2) {
+    // case 1: range2 is subset
+    if (start1 <= start2 && end1 >= end2) {
+      return true;
+    }
+
+    // case 2: range2 overlaps from left
+    if (start1 >= start2 && start1 <= end2 && end1 >= start1 && end1 >= end2) {
+      return true;
+    }
+
+    // case 3: range2 overlaps from right
+    if (start1 <= start2 && start1 <= end2 && end1 >= start1 && end1 <= end2) {
+      return true;
+    }
+
+    return false;
+  }
+
   app.get('/api/place/:id/booking/:bookingId/offers', async (req, res, next) => {
     try {
       const placeId = parseInt(req.params.id);
@@ -688,25 +707,21 @@ module.exports = (
       if (!booking) throw ErrorResponse.NotFound('booking not found');
       if (!interval) throw ErrorResponse.NotFound('interval not found');
 
-      const slot = interval.intervals.find(x => booking.day
-          ? x.day == booking.day && x.start == booking.startTime && x.end == booking.endTime
-          : x.start == booking.startTime && x.end == booking.endTime
+      const slots = interval.intervals.filter(x => booking.day
+        ? x.day === booking.day && rangesOverlap(Number(x.start), Number(x.end), Number(booking.startTime), Number(booking.endTime))
+        : rangesOverlap(Number(x.start), Number(x.end), Number(booking.startTime), Number(booking.endTime))
       );
 
-      let offers = await Offer.find({ place: placeId }).toArray();;
-      if (slot && slot.offers && Array.isArray(slot.offers)) {
-        offers = offers.map(x => {
-          x.isAvailable = slot.offers.indexOf(x._id) > -1;
-          return x;
-        });
-      } else {
-        offers = offers.map(x => {
-          x.isAvailable = true;
-          return x;
-        });
-      }
+      const offers = await Offer.find({ place: placeId }).toArray();
+      const availableOfferIds = Array.from(new Set(slots
+        .map(slot => slot.offers)
+        .reduce((acc, el) => acc.concat(el), [])
+        ));
+      let availableOffers = offers
+        .filter(offer => availableOfferIds.includes(offer._id))
+        .map(offer => ({ ...offer, isAvailable: true }));
 
-      return res.status(200).json(offers);
+      return res.status(200).json(availableOffers);
     } catch (error) {
       return next(error);
     }
