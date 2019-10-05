@@ -14,7 +14,13 @@ const newEditUserAdminSchema = require('./schema/editUserAdmin');
 const ErrorResponse = require('./../../core/errorResponse');
 const { SUBSCRIPTION } = require('./../../config/constant');
 
-module.exports = (app, validate, userRepository, User, Offer, Booking, Place, OfferPost, UserPaymentToken, getNewId) => {
+module.exports = (
+  app,
+  validate,
+  userRepository,
+  bookingRepository,
+  offerRepository,
+  User, Offer, Booking, Place, OfferPost, UserPaymentToken, getNewId) => {
 
   // Get the current (authenticated) User
   app.get('/api/user/current', middleware.isAuthorized, async (req, res, next) => {
@@ -303,6 +309,54 @@ module.exports = (app, validate, userRepository, User, Offer, Booking, Place, Of
       }));
   
       return res.status(200).json(full.filter(elem => elem));
+    } catch (error) {
+      return next(error);
+    }
+  });
+
+  app.get('/api/v2/user/bookings', middleware.isAuthorized, async (req, res, next) => {
+    try {
+      const user = await req.user;
+      let bookings = await bookingRepository.findAllUserBookings(user._id);
+      bookings = await Promise.all(bookings.map(async (booking) => {
+        const newBooking = await bookingRepository.joinPlace(
+          booking,
+          ['name', 'address', 'photos', 'socials', 'location', 'address', 'mainImage', 'offers']);
+        
+          newBooking.place = newBooking.place || { photo: '', instaUser: '' };
+
+        if (newBooking.place.photos) {
+          newBooking.place.photo = newBooking.place.mainImage;
+          delete newBooking.place.photos;
+        }
+
+        if ((newBooking.place.socials || {}).instagram) {
+          const match = newBooking.place.socials.instagram.match(/^.*instagram.com\/(.*)\/?.*/i);
+          if (match) {
+            newBooking.place.instaUser = match[1].replace('/', '');
+          } else {
+            newBooking.place.instaUser = '';
+          }
+
+          // if more than 1 day passed since booking end time, close it
+          const date = moment(newBooking.date + ' ' + newBooking.endTime, 'DD-MM-YYYY HH.mm');
+          const tommorow = moment(date.add('1', 'days').format('DD-MM-YYYY'), 'DD-MM-YYYY');
+          const diff = tommorow.diff(moment(), 'days');
+          if (diff < 0) {
+            if (!newBooking.closed) {
+              await bookingRepository.close(newBooking._id);
+              newBooking.closed = true;
+            }
+          }
+
+          newBooking.selectedOffer = await offerRepository.findById((newBooking.offers || []).slice(-1)[0]);
+          delete newBooking.offers;
+          
+          return newBooking;
+        }
+      }));
+  
+      return res.status(200).json(bookings.filter((e) => e));
     } catch (error) {
       return next(error);
     }

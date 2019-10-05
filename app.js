@@ -155,6 +155,8 @@ async function bootstrap() {
     app,
     newValidator(),
     newUserRepository(),
+    newBookingRepository(),
+    newOfferRepository(),
     User, Offer, Booking, Place, OfferPost, UserPaymentToken, entityHelper);
   require('./routes/admins')(app, User, Place, Offer, OfferPost, Booking, OfferPostArchive);
   require('./routes/client')(app, User, Place, Offer, Counter, Booking, OfferPost, Interval, SamplePost);

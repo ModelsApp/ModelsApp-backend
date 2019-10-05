@@ -1,3 +1,5 @@
+const _ = require('lodash');
+
 const newBookingRepository = (model, placeRepository) => ({
   findManyByIds: (ids) => {
     return model.find({ _id: { $in: ids } }).toArray();
@@ -27,10 +29,10 @@ const newBookingRepository = (model, placeRepository) => ({
     return model.find({ user: userId }).toArray();
   },
 
-  joinPlace: async (booking) => {
+  joinPlace: async (booking, fieldsToSelect) => {
     return {
       ...booking,
-      place: await placeRepository.findById(booking.place),
+      place: _.pick((await placeRepository.findById(booking.place)), fieldsToSelect),
     }
   },
 
