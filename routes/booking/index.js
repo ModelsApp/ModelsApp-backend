@@ -75,9 +75,10 @@ module.exports = (app, placeRepository, userRepository, bookingRepository, event
       })));
       eventBookings = await Promise.all(eventBookings.map(async (eb) => ({
         ...eb,
-        event: await eventRepository.joinPlace(eb.event),
+        event: eb.event ? await eventRepository.joinPlace(eb.event) : null,
       })));
       result.event = eventBookings;
+      
       return res.status(200).json(result);
     } catch (error) {
       return next(error);

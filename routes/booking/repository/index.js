@@ -22,11 +22,15 @@ const newBookingRepository = (model, placeRepository) => ({
   },
 
   findAllRegularBookingsForUser: (userId) => {
-    return model.find({ user: userId }, { eventId: null }).toArray();
+    return model.find({ user: userId, eventId: null }).toArray();
   },
 
   findAllUserBookings: (userId) => {
     return model.find({ user: userId }).toArray();
+  },
+
+  findAllUserNotClosedBookings: (userId) => {
+    return model.find({ user: userId, closed: false }).toArray();
   },
 
   joinPlace: async (booking, fieldsToSelect) => {

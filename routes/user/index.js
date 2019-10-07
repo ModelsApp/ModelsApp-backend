@@ -317,13 +317,13 @@ module.exports = (
   app.get('/api/v2/user/bookings', middleware.isAuthorized, async (req, res, next) => {
     try {
       const user = await req.user;
-      let bookings = await bookingRepository.findAllUserBookings(user._id);
+      let bookings = await bookingRepository.findAllUserNotClosedBookings(user._id);
       bookings = await Promise.all(bookings.map(async (booking) => {
         const newBooking = await bookingRepository.joinPlace(
           booking,
-          ['name', 'address', 'photos', 'socials', 'location', 'address', 'mainImage', 'offers']);
+          ['_id', 'name', 'address', 'photos', 'socials', 'location', 'address', 'mainImage', 'offers']);
         
-          newBooking.place = newBooking.place || { photo: '', instaUser: '' };
+        newBooking.place = newBooking.place || { photo: '', instaUser: '' };
 
         if (newBooking.place.photos) {
           newBooking.place.photo = newBooking.place.mainImage;
