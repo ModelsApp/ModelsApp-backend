@@ -85,8 +85,12 @@ module.exports = (
   app.put('/api/event', async (req, res, next) => {
     try {
       const allRequirements = await requirementRepository.getAll();
-      const validation = validate(req.body, newEditSchema(allRequirements));
-      if (validation.error) throw ErrorResponse.BadRequest(validation.error);
+      const placeId = req.body.placeId || (await eventRepository.findById(req.body.eventId)).placeId;
+      const intervalIds = (await bookUtil.getPlaceIntervals(placeId)).map(i => i._id);
+      const validation = validate(req.body, newEditSchema(allRequirements, intervalIds));
+      if (validation.error) {
+        return res.status(400).json({ message: validation.error });
+      }
   
       if (req.body.placesOffers) {
         await validatePlacesOffers(req.body.placesOffers, placeRepository);
@@ -94,13 +98,13 @@ module.exports = (
       if (req.body.eventOffers) {
         await validateEventOffers(req.body.eventOffers, eventOfferRepository);
       }
-  
+    
       const updatedEvent = await eventRepository.updateOne(req.body.eventId, {
         ...req.body,
         ...(req.body.eventOffers && { eventOffers: await eventOfferRepository.findManyByName(req.body.eventOffers) }),
       });
       if (!updatedEvent) throw ErrorResponse.BadRequest('wrong id');
-  
+    
       return res.status(200).json(updatedEvent);
     } catch (error) {
       return next(error);
