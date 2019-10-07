@@ -1,7 +1,8 @@
-var passport = require('passport');
-var token = require('../config/generateToken');
-var isAuthorized = require('../config/authMiddleware').isAuthorized;
-var authEmail = require('../config/authEmail');
+const passport = require('passport');
+const token = require('../config/generateToken');
+const isAuthorized = require('../config/authMiddleware').isAuthorized;
+const authEmail = require('../config/authEmail');
+const middleware = require('../config/authMiddleware');
 
 function generateUserToken(req, res) {
   var accessToken = token.generateAccessToken(req.user._id);
@@ -131,4 +132,19 @@ module.exports = (app, User, Profile, getNewId) => {
   
    app.post('/api/auth/user/signin', authEmail.newCreateUser(getNewId, User));
    app.post('/api/auth/user/login', authEmail.newLoginUser(User));
+
+   app.get('/api/auth/token/isActive', async (req, res) => {
+     try {
+      await new Promise((resolve, reject) => {
+        middleware.isAuthorized(req, {}, (err) => {
+          if (err) reject(err)
+          resolve();
+        });
+       });
+
+       return res.status(403).json({ isAuthorized: true });
+     } catch (error) {
+       return res.status(403).json({ isAuthorized: false });
+     }
+   });
 };

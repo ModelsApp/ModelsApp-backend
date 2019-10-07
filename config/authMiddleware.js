@@ -5,9 +5,9 @@ const ErrorResponse = require('./../core/errorResponse');
 module.exports = {
   isAuthorized: function (req, res, next) {
     return passport.authenticate('jwt', { session: false }, function (err, user) {
-      if (err) return next(err);
+      if (err) return next(ErrorResponse.Internal());
       if (!user){
-        res.status(403).json({ message: "Not authenticated" });
+        return next(ErrorResponse.Unauthorized());
       } else {
         req.user = user;
         next();
@@ -17,9 +17,9 @@ module.exports = {
 
   isClient: function(req, res, next) {
     return passport.authenticate('jwt-client', { session: false }, function (err, client) {
-      if (err) return next(err);
+      if (err) return next(ErrorResponse.Internal());
       if (!client){
-        res.json({ message: "Not a client" });
+        return next(ErrorResponse.Unauthorized());
       } else {
         req.user = client;
         next();
@@ -29,9 +29,7 @@ module.exports = {
 
   isDriver: (req, res, next) => {
     return passport.authenticate('jwt', { session: false }, (err, user) => {
-      if (err) {
-        throw ErrorResponse.Internal();
-      }
+      if (err) return next(ErrorResponse.Internal());
       try {
         if (!user || !user.driver) {
           throw ErrorResponse.Unauthorized();
@@ -63,16 +61,16 @@ module.exports = {
 
   isAdmin: function (req, res, next) {
     return passport.authenticate('jwt', { session: false }, async function (err, user) {
-      if (err) return next(err);
+      if (err) return next(ErrorResponse.Internal());
       user = await user;
       if (!user){
-        res.json({ message: "Not authenticated" });
+        return next(ErrorResponse.Unauthorized());
       } else {
         if(user.admin === true){
           req.user = user;
           next();
         } else {
-          res.json({ isAdmin: false });
+          return next(ErrorResponse.Unauthorized());
         }
       }
     })(req, res, next);
