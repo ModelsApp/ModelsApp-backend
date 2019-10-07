@@ -1,8 +1,10 @@
-var passport = require('passport');
-var db = require('../config/connection');
-var token = require('../config/generateToken');
-var isAuthorized = require('../config/authMiddleware').isAuthorized;
-var authEmail = require('../config/authEmail');
+
+const db = require('../config/connection');
+const passport = require('passport');
+const token = require('../config/generateToken');
+const isAuthorized = require('../config/authMiddleware').isAuthorized;
+const authEmail = require('../config/authEmail');
+const middleware = require('../config/authMiddleware');
 
 var User;
 db.getInstance(function (p_db) {
@@ -138,4 +140,18 @@ module.exports = function (app) {
   
    app.post('/api/auth/user/signin', authEmail.createUser);
    app.post('/api/auth/user/login', authEmail.loginUser);
+   app.get('/api/auth/token/isActive', async (req, res) => {
+    try {
+     await new Promise((resolve, reject) => {
+       middleware.isAuthorized(req, {}, (err) => {
+         if (err) reject(err)
+         resolve();
+       });
+      });
+
+      return res.status(200).json({ isAuthorized: true });
+    } catch (error) {
+      return res.status(403).json({ isAuthorized: false });
+    }
+  });
 };
