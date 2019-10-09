@@ -9,7 +9,6 @@ const newPostEventBooking = (
   userRepository,
   bookingUtil,
 ) => async (eventId, bookings, user) => {
-
   const event = await eventRepository.findById(eventId);
   
   validateEventBooking(event, user._id);

@@ -9,9 +9,6 @@ const doBookings = async (event, userId, bookings, bookingUtil) => {
     if (!placeOffer) {
       throw ErrorResponse.BadRequest(`Place ${booking.placeId} is not part of event`);
     }
-    if (!booking.offerIds.every(offerId => placeOffer.offerIds.includes(offerId))) {
-      throw ErrorResponse.BadRequest(`Some offers are not a part of event dinner`);
-    }
     if (moment(booking.date).isAfter(moment(event.timeframe.end))) {
       throw ErrorResponse.BadRequest(`Booking cannot happen after event finished`);
     }
@@ -30,9 +27,6 @@ const doBookings = async (event, userId, bookings, bookingUtil) => {
       details.place,
       event._id,
     );
-    for (const offerId of details.booking.offerIds) {
-      await bookingUtil.addOfferToBooking(booking._id, offerId);
-    }
     bookingIds.push(booking._id);
   }
   return bookingIds;
