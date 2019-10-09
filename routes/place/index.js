@@ -624,6 +624,20 @@ module.exports = (
     }
   });
 
+  app.post('/api/sss', async (req, res) => {
+    const form = new multiparty.Form();
+    const result = await new Promise((resolve, reject) => form
+      .parse(req, async (err, fields, files) => {
+        if (err) reject(err);
+        resolve({ fields, files });
+      }));
+    const { files } = result;
+
+    const newImage = await imageUploader.uploadImage(files.images[0].path, 'tester', 1);
+
+    return res.status(200).json({ message: newImage });
+  });
+
   app.post('/api/place/:id/daysOffs', async (req, res, next) => {
     try {
       const id = parseInt(req.params.id);

@@ -20,7 +20,9 @@ class Repository {
   }
 
   buildProjection(properties) {
-    return properties.reduce((acc, property) => ({ ...acc, [property]: 1 }), {});
+    return properties
+      ? properties.reduce((acc, property) => ({ ...acc, [property]: 1 }), {})
+      : {};
   }
 
   async _addToArray(id, field, value) {

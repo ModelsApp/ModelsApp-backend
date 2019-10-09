@@ -12,6 +12,10 @@ class UserRepository extends Repository {
     return this.model.findOne({ _id: id });
   }
 
+  findWhere(options) {
+    return this.model.find(options).toArray();
+  }
+
   findById(id) {
     return this.model.findOne({ _id: id });
   }

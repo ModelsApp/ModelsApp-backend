@@ -39,6 +39,7 @@ const bookingUtil = require('./routes/booking/util');
 const pushProvider = require('./lib/pushProvider');
 const newEntityHelper = require('./lib/entityHelper');
 const calculateDistance = require('./lib/calculateDistance');
+const Compresser = require('./config/cloudinary/compresser');
 
 async function bootstrap() {
   Sentry.init({ dsn: config.sentryUrl });
@@ -143,6 +144,19 @@ async function bootstrap() {
   );
 
   addMiddlewares(app);
+
+  const cloudinary = require('cloudinary').v2
+  cloudinary.config({ 
+    cloud_name: config.cloudinaryName,
+    api_key: config.cloudinaryKey,
+    api_secret: config.cloudinarySecret
+  });
+  const compresser = new Compresser(cloudinary);
+
+  app.get('/api/compress', async (req, res) => {
+    const result = await compresser.compressUserImages(newUserRepository());
+    res.json({ message: 'compressed!' });
+  });
 
   require('./config/authJWT')(passport, User, Place);
   require('./config/authLocal')(passport, Place, Counter, User, Interval, entityHelper);
