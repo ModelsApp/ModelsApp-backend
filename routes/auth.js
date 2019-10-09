@@ -142,9 +142,9 @@ module.exports = (app, User, Profile, getNewId) => {
         });
        });
 
-       return res.status(403).json({ isAuthorized: true });
+       return res.status(200).json({ isAuthorized: true });
      } catch (error) {
-       return res.status(200).json({ isAuthorized: false });
+       return res.status(403).json({ isAuthorized: false });
      }
    });
 };
