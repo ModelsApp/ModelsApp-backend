@@ -32,6 +32,27 @@ class Compresser {
     }
   }
 
+  async compressPlaceImages(placeRepository) {
+    const limit = 10;
+    let page = 0;
+    let places = await placeRepository.findPaginatedPlaces(limit, page);
+
+    while(places.length) {
+      for (const place of places) {
+        const { images } = place;
+  
+        if (!images || !images.length) continue;
+        
+        for (const image of images) {
+          await this.compressSingleImage(image.url);
+        }
+      }
+      page += 1;
+      console.log('compressed ', limit*page, 'places...');
+      places = await placeRepository.findPaginatedPlaces(limit, page);
+    }
+  }
+
   async compressSingleImage(url) {
     const [_, specific] = url.split('/upload/');
     const localId = `temp/${specific.split('/').slice(-1)[0]}`;
@@ -49,6 +70,7 @@ class Compresser {
       folder,
       crop: 'scale',
       format: 'jpg',
+      invalidate: true,
     };
     const { width, height } = await this.getImageDimensions(localId);
     if (width > 700) {
@@ -58,13 +80,7 @@ class Compresser {
     }
 
     const result = await new Promise((resolve) => {
-      this.cloudinary.uploader.upload(localId, {
-        public_id: publicId,
-        folder,
-        width: 800,
-        crop: 'scale',
-        format: 'jpg',
-      }, (error, result) => {
+      this.cloudinary.uploader.upload(localId, uploadParams, (error, result) => {
         if(error) resolve();
         else resolve({
           cloudinaryId: result.public_id,

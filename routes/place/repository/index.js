@@ -69,6 +69,17 @@ const newPlaceRepository = (model, requirementRepository) => ({
       }, 
       { new: true, returnOriginal: false },
     );
+  },
+
+  findPaginatedPlaces(limit, page) {
+    const query = model.find({});
+    if (limit && page) {
+      query.skip(limit*(page+1))
+        .limit(limit)
+        .sort({ _id: 1 })
+    }
+
+    return query.toArray();
   }
 });
 
