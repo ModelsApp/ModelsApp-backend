@@ -14,7 +14,7 @@ const newSchema = {
   city: Joi.string().strict(),
   instagramName: Joi.string().strict(),
   level: Joi.number().integer(),
-  deviceID: Joi.string().integer(),
+  deviceID: Joi.string(),
   referral: Joi.string().strict(),
 };
 
