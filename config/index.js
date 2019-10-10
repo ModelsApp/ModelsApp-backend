@@ -16,4 +16,5 @@ module.exports = {
   cloudinarySecret: process.env.CLOUDINARY_SECRET || '',
   sentryUrl: process.env.sentryUrl || '',
   iosVersion:  process.env.iosVersion || 81,
+  hostname:  process.env.HOSTNAME || 'localhost:3000',
 };

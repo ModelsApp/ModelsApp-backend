@@ -291,26 +291,25 @@ module.exports = function(app) {
   });
 
   app.get('/api/user/:id/confirm/:hash', async (req, res) => {
-    var id = parseInt(req.params.id);
-    var hash = req.params.hash;
-    if(id && hash){
-      User.findOneAndUpdate({ _id : id, isEmailAcceptationPending: true, confirmHash : hash }, 
+    try {
+      const id = parseInt(req.params.id);
+      const hash = req.params.hash;
+      if (!id || !hash) {
+        return res.status(403).json({ message: "Couldn't confirm user" });
+      }
+      const user = await User.findOneAndUpdate(
+        { _id : id, isEmailAcceptationPending: true, confirmHash : hash }, 
         { $set : { isEmailAcceptationPending : false, confirmHash: null } },
-        {new: true}
-        )
-        .then((user) => {
-          if(user && user.value){
-            var filePath = path.join(__dirname, '../htmlTemplates/userConfirmed.html')
-            res.sendFile(filePath);
-          }else{
-            res.status(404).json({message: 'Not found'});
-          }
-        })
-        .catch((err) => {
-  
-        });
-    }else{
-      res.status(400).json({message: 'invalid parameters'});
+        { new: true });
+      if (!user || !user.value) {
+        return res.status(404).json({ message: 'Something went wrong :(' });
+      }
+      const filePath = path.join(__dirname, '../htmlTemplates/userConfirmed.html');
+
+      return res.status(200).sendFile(filePath);
+    } catch (error) {
+      console.log(error);
+      return res.status(500).json({ message: 'Something went wrong :(' });
     }
   });
 
