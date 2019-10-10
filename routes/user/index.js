@@ -420,7 +420,7 @@ module.exports = (
       if (!user || !user.value) {
         throw ErrorResponse.NotFound();
       }
-      const filePath = path.join(__dirname, '../htmlTemplates/userConfirmed.html');
+      const filePath = path.join(__dirname, '../../htmlTemplates/userConfirmed.html');
 
       return res.status(200).sendFile(filePath);
     } catch (error) {

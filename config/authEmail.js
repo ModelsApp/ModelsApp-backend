@@ -7,7 +7,6 @@ const { SUBSCRIPTION } = require('./constant');
 var exports = module.exports = {};
 
 exports.newCreateUser = (getNewId, User) => async (req, res, next) => {
-    console.log(req, res, next)
     var email = req.body.email;
     var password = req.body.password;
     var confirmPassword = req.body.confirmPassword;
