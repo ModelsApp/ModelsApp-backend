@@ -16,8 +16,11 @@ const newPostEventBooking = (
   await eventBookingRepository.transaction(
     async () => {
       await userRepository.subtractCredits(user, calculateCredits(event.baseCredits, user.level, event.level));
-      const bookingIds = await doBookings(event, user._id, bookings, bookingUtil);
-      await eventRepository.bookEvent(eventId, user._id);
+      let bookingIds = [];
+      if (bookings) {
+        bookingIds = await doBookings(event, user._id, bookings, bookingUtil);
+        await eventRepository.bookEvent(eventId, user._id);
+      }
       eventBooking = await eventBookingRepository
         .insertOne({ eventId, bookings: bookingIds, userId: user._id });
     });
