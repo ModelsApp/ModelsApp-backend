@@ -34,6 +34,13 @@ module.exports = (app, driverRideRepository, driverRepository, rideRepository, v
 
       const driverRides = await driverRideRepository.findByPlaceId(placeId);
 
+      for (const driverRide of driverRides) {
+        const drivers = await driverRepository.findManyByIds(driverRide.drivers);
+        const totalSpots = drivers.reduce((acc, driver) => acc + driver.spots, 0);
+        const freeSpots = totalSpots - driverRide.rides.length;
+        driverRide.freeSpots = freeSpots >  0 ? freeSpots : 0;
+      }
+
       return res.status(200).json(driverRides);
     } catch (error) {
       return next(error);

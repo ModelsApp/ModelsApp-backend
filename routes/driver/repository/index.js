@@ -75,6 +75,11 @@ const newDriverRepository = (model) => ({
     }
     return model.findOne({ _id: oid });
   },
+
+  findManyByIds: (ids) => {
+    const mappedIds = ids.map(id => getObjectId(id));
+    return model.find({ _id: { $in: mappedIds }}).toArray();
+  }
 });
 
 module.exports = newDriverRepository;
