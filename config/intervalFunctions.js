@@ -2,7 +2,6 @@ var moment = require('moment');
 var sendGrid = require('../lib/sendGrid');
 var schedule = require('node-schedule');
 
-
 exports.sendReportBookingEmail = function (db) {
   schedule.scheduleJob('50 20 * * *', function () {
     intervalFuncSendReportBookingEmail(db);
