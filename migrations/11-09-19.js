@@ -22,12 +22,9 @@ module.exports = (app, User, Place, Offer, Counter, Booking, OfferPost, Interval
     console.log('8');
 
     let a, ps, users, places;
-    a = await Booking.find({}).toArray();
     console.log('9');
 
-    ps = await Promise.all(a.map(async (el) => {
-      await Booking.replaceOne({ _id: el._id }, { ...el, eventId: null });
-    }));
+    await Booking.updateMany({}, { $set: { eventId: null }});
     console.log('10');
     
     a = await Booking.find({}).toArray();
@@ -42,23 +39,11 @@ module.exports = (app, User, Place, Offer, Counter, Booking, OfferPost, Interval
     }));
     console.log('12');
 
-    users = await User.find({}).toArray();
+    await User.updateMany({}, { $set: { subscriptionPlan: { subscription: 'Unlimited' } }});
     console.log('13');
 
-    await Promise.all(users.map(async (newUser) => {
-      newUser.subscriptionPlan = { subscription: 'Unlimited' };
-      await User.replaceOne({ _id: newUser._id }, newUser);
-    }));
+    await Place.updateMany({}, { $set: { access: 'basic' }});
     console.log('14');
-
-    places = await Place.find({}).toArray();
-    console.log('15');
-
-    await Promise.all(places.map(async (place) => {
-      place.access = 'basic';
-      await Place.replaceOne({ _id: place._id }, place);
-    }));
-    console.log('16');
 
     await Booking.updateMany({date: '10-03-2019'}, {$set: {closed: false}});
 
@@ -86,7 +71,8 @@ module.exports = (app, User, Place, Offer, Counter, Booking, OfferPost, Interval
     await Booking.updateMany({}, { $unset: { eventId: '' } });
     console.log('8');
 
-    await Promise.all(a.map(async (el) => {
+    const bookings = await Booking.find({}).toArray();
+    await Promise.all(bookings.map(async (el) => {
       el.creationDate = moment(el.creationDate).format('DD-MM-YYYY');
       await Booking.replaceOne({ _id: el._id }, el);
     }));
@@ -95,6 +81,7 @@ module.exports = (app, User, Place, Offer, Counter, Booking, OfferPost, Interval
     await User.updateMany({}, { $unset: { subscription: '' }});
     console.log('10');
     await Place.updateMany({}, { $unset: { access: '' }});
+    console.log('11');
 
     return res.send('ok');
   });
