@@ -32,9 +32,11 @@ module.exports = (app, User, Place, Offer, Counter, Booking, OfferPost, Interval
 
     ps = await Promise.all(a.map(async (el) => {
       try {
-        const parts = el.creationDate.split("-");
-        el.creationDate = moment(new Date(parts[2], parts[1] - 1, parts[0])).add({days:1}).subtract({hours:22}).toISOString();
-        await Booking.replaceOne({ _id: el._id }, el);
+        if (moment(el.creationDate, 'DD-MM-YYYY').isValid()) {
+          const parts = el.creationDate.split("-");
+          el.creationDate = moment(new Date(parts[2], parts[1] - 1, parts[0])).add({days:1}).subtract({hours:22}).toISOString();
+          await Booking.replaceOne({ _id: el._id }, el);
+        }
       } catch (err) {}
     }));
     console.log('12');
@@ -52,11 +54,25 @@ module.exports = (app, User, Place, Offer, Counter, Booking, OfferPost, Interval
     console.log('16');
     ps = await Promise.all(a.map(async (el) => {
       try {
-        el.creationDate = moment(el.creationDate, 'DD-MM-YYYY').toISOString();
-        await OfferPost.replaceOne({ _id: el._id }, el);
+        if (moment(el.creationDate, 'DD-MM-YYYY').isValid()) {
+          el.creationDate = moment(el.creationDate, 'DD-MM-YYYY').toISOString();
+          await OfferPost.replaceOne({ _id: el._id }, el);
+        }
       } catch (err) {}
     }));
     console.log('17');
+
+    a = await User.find({}).toArray();
+    console.log('18');
+    ps = await Promise.all(a.map(async (el) => {
+      try {
+        if (moment(el.creationDate, 'DD-MM-YYYY').isValid()) {
+          el.creationDate = moment(el.creationDate, 'DD-MM-YYYY').toISOString();
+          await User.replaceOne({ _id: el._id }, el);
+        }
+      } catch (err) {}
+    }));
+    console.log('19');
 
     return res.send('done');
   });
@@ -84,8 +100,10 @@ module.exports = (app, User, Place, Offer, Counter, Booking, OfferPost, Interval
 
     const bookings = await Booking.find({}).toArray();
     await Promise.all(bookings.map(async (el) => {
-      el.creationDate = moment(el.creationDate).format('DD-MM-YYYY');
-      await Booking.replaceOne({ _id: el._id }, el);
+      if (moment(el.creationDate).isValid()) {
+        el.creationDate = moment(el.creationDate).format('DD-MM-YYYY');
+        await Booking.replaceOne({ _id: el._id }, el);
+      }
     }));
     console.log('9');
 
@@ -97,10 +115,22 @@ module.exports = (app, User, Place, Offer, Counter, Booking, OfferPost, Interval
     const offerPosts = await OfferPost.find({}).toArray();
     console.log('16');
     await Promise.all(offerPosts.map(async (el) => {
-      el.creationDate = moment(el.creationDate).format('DD-MM-YYYY');
-      await OfferPost.replaceOne({ _id: el._id }, el);
+      if (moment(el.creationDate).isValid()) {
+        el.creationDate = moment(el.creationDate).format('DD-MM-YYYY');
+        await OfferPost.replaceOne({ _id: el._id }, el);
+      }
     }));
     console.log('17');
+
+    const users = await User.find({}).toArray();
+    console.log('18');
+    await Promise.all(users.map(async (el) => {
+      if (moment(el.creationDate).isValid()) {
+        el.creationDate = moment(el.creationDate).format('DD-MM-YYYY');
+        await User.replaceOne({ _id: el._id }, el); 
+      }
+    }));
+    console.log('19');
 
     return res.send('ok');
   });

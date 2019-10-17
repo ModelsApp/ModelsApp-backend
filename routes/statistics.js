@@ -419,12 +419,18 @@ module.exports = (app, User, Place, Offer, Counter, Booking, OfferPost, Interval
   
       const totalBookings = await Booking.countDocuments({ creationDate: { $gte: since } });
       const totalActions = await OfferPost.countDocuments({ creationDate: { $gte: since } });
+      const newUsers = await User
+        .find({ creationDate: { $gte: since } })
+        .sort({ creationDate: 1 })
+        .limit(5)
+        .toArray();
 
       return res.json({
         totalBookings,
         totalActions,
         totalContents: 10,
         wallet: 250000,
+        newUsers,
       });
     } catch (err) {
       return next(err);
