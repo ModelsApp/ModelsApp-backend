@@ -46,6 +46,17 @@ module.exports = (app, User, Place, Offer, Counter, Booking, OfferPost, Interval
     console.log('14');
 
     await Booking.updateMany({date: '10-03-2019'}, {$set: {closed: false}});
+    console.log('15');
+
+    a = await OfferPost.find({}).toArray();
+    console.log('16');
+    ps = await Promise.all(a.map(async (el) => {
+      try {
+        el.creationDate = moment(el.creationDate, 'DD-MM-YYYY').toISOString();
+        await OfferPost.replaceOne({ _id: el._id }, el);
+      } catch (err) {}
+    }));
+    console.log('17');
 
     return res.send('done');
   });
@@ -82,6 +93,14 @@ module.exports = (app, User, Place, Offer, Counter, Booking, OfferPost, Interval
     console.log('10');
     await Place.updateMany({}, { $unset: { access: '' }});
     console.log('11');
+
+    const offerPosts = await OfferPost.find({}).toArray();
+    console.log('16');
+    await Promise.all(offerPosts.map(async (el) => {
+      el.creationDate = moment(el.creationDate).format('DD-MM-YYYY');
+      await OfferPost.replaceOne({ _id: el._id }, el);
+    }));
+    console.log('17');
 
     return res.send('ok');
   });

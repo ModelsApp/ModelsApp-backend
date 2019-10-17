@@ -403,4 +403,31 @@ module.exports = (app, User, Place, Offer, Counter, Booking, OfferPost, Interval
     place.visitors = await Booking.countDocuments({ place: id });
     res.json(place);
   });
+
+  app.get('/api/statistics/metrics', async (req, res, next) => {
+    try {
+      let days = parseInt(req.query.days);
+
+      const query = {};
+      if (isNaN(days)) {
+        days = 30;
+      } else {
+        query.days = days;
+      }
+  
+      const since = moment().subtract({ days }).toISOString();
+  
+      const totalBookings = await Booking.countDocuments({ creationDate: { $gte: since } });
+      const totalActions = await OfferPost.countDocuments({ creationDate: { $gte: since } });
+
+      return res.json({
+        totalBookings,
+        totalActions,
+        totalContents: 10,
+        wallet: 250000,
+      });
+    } catch (err) {
+      return next(err);
+    }
+  });
 };

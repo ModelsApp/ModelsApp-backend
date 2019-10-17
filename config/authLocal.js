@@ -52,7 +52,7 @@ module.exports = (passport, Place, Counter, User, Interval, getNewId) => {
                     level: null,
                     schedule: {},
                     slots: body.slots || null,
-                    creationDate: moment().format('DD-MM-YYYY'),
+                    creationDate: moment().toISOString(),
                     credits: 0,
                     bookings: [],
                     offers: [],
