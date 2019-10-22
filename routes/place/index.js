@@ -195,7 +195,7 @@ module.exports = (
       const place = await Place.findOne({ _id: id });
       if (!place) throw ErrorResponse.NotFound('place not found');
 
-      if (newPlace.isActive !== place.isActive) place.isActive = newPlace.isActive;
+      if (newPlace.isActive !== place.isActive && newPlace.isActive !== undefined) place.isActive = newPlace.isActive;
       if (newPlace.phone !== place.phone && newPlace.phone) place.phone = newPlace.phone;
       if (newPlace.instapage !== place.instapage && newPlace.instapage) place.instapage = newPlace.instapage;
       if (newPlace.name !== place.name && newPlace.name) place.name = newPlace.name;
@@ -245,7 +245,7 @@ module.exports = (
       if (newPlace.city) place.city = newPlace.city;
       if (newPlace.requirements) place.requirements = newPlace.requirements;
 
-      await Place.replaceOne({ _id: id }, newPlace);
+      await Place.replaceOne({ _id: id }, place);
 
       return res.status(201).json({ message: 'place updated' });
     } catch (error) {

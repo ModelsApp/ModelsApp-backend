@@ -54,7 +54,7 @@ const newSchema = (validTypes, validExtras, validCities, requirements) => Joi.ob
   bookingLimits: Joi.object().pattern(/^\d+$/, Joi.number().integer().strict()),
   bookingLimitsPeriod: Joi.string().strict().valid(Object.values(BOOKING_LIMIT_PERIODS)),
   city: Joi.string().strict().valid(validCities),
-  requirements: Joi.object().keys(generateRequirements(requirements)).required(),
+  requirements: Joi.object().keys(generateRequirements(requirements)),
 });
 
 module.exports = newSchema;
