@@ -8,6 +8,9 @@ const ErrorResponse = require('./../../core/errorResponse');
 module.exports = (app, placeRepository, userRepository, bookingRepository, eventBookingRepository, eventRepository,
   bookingUtil, User, Place, Offer, Counter, Booking, OfferPost, Interval, SamplePost) => {
 
+  const getBookingClaimDetails = require('./api/claim/getBookingClaimDetails')(Offer, User, bookingUtil);
+  const userCanClaim = require('./api/claim/userCanClaim');
+
   app.get('/api/place/:id/book/slots', async (req, res, next) => {
     try {
       const id = parseInt(req.params.id);
@@ -65,7 +68,26 @@ module.exports = (app, placeRepository, userRepository, bookingRepository, event
       const user = await req.user;
       const result = {};
 
-      const regularBookings = await bookingRepository.findAllRegularBookingsForUser(user._id);
+      let regularBookings = await bookingRepository.findAllRegularBookingsForUser(user._id);
+      regularBookings = await Promise.all(regularBookings.map(async (booking) => {
+        const { requiredCredits, user } = await getBookingClaimDetails(booking);
+        const creditsToPay = requiredCredits > 0 ? -requiredCredits : requiredCredits;
+        let canClaimValue;
+        let errMessage;
+        try {
+          canClaimValue = userCanClaim(user, booking, creditsToPay);
+        } catch (e) {
+          canClaimValue = false;
+          errMessage = e.message;
+        }
+        return {
+          ...booking,
+          canClaim: {
+            value: canClaimValue,
+            message: errMessage || '',
+          }
+        }
+      }))
       result.regular = regularBookings;
 
       let eventBookings = await eventBookingRepository.findAllForUser(user._id);
@@ -73,10 +95,26 @@ module.exports = (app, placeRepository, userRepository, bookingRepository, event
         ...eb,
         event: await eventRepository.findById(eb.eventId),
       })));
-      eventBookings = await Promise.all(eventBookings.map(async (eb) => ({
-        ...eb,
-        event: eb.event ? await eventRepository.joinPlace(eb.event) : null,
-      })));
+      eventBookings = await Promise.all(eventBookings.map(async (eb) => {
+        const { requiredCredits, user } = await getBookingClaimDetails(eb);
+        const creditsToPay = requiredCredits > 0 ? -requiredCredits : requiredCredits;
+        let canClaimValue;
+        let errMessage;
+        try {
+          canClaimValue = userCanClaim(user, eb, creditsToPay);
+        } catch (e) {
+          canClaimValue = false;
+          errMessage = e.message;
+        }
+        return {
+          ...eb,
+          event: eb.event ? await eventRepository.joinPlace(eb.event) : null,
+          canClaim: {
+            value: canClaimValue,
+            message: errMessage || '',
+          }
+        }
+      }));
       result.event = eventBookings;
       
       return res.status(200).json(result);
@@ -329,7 +367,7 @@ module.exports = (app, placeRepository, userRepository, bookingRepository, event
       const newBooking = {
         user: parseInt(req.body.userID),
         place: id,
-        date, //moment(req.body.date).format('DD-MM-YYYY')
+        date: moment(req.body.date).format('DD-MM-YYYY'),
         creationDate: new Date().toISOString(),
         closed: false,
         claimed: false,
@@ -437,32 +475,22 @@ module.exports = (app, placeRepository, userRepository, bookingRepository, event
   });
 
   app.put('/api/place/book/:id/claim', async (req, res, next) => {
-    try {
+    try {  
       const booking = await Booking.findOne({ _id: parseInt(req.params.id) });
       if (!booking) {
         throw ErrorResponse.NotFound('No such booking');
       }
-      let offers = await Offer.find({ _id: { $in: booking.offers } }, { projection: { level: 1 } }).toArray();
-      let user = await User.findOne({ _id: booking.user });
-      if (!user) {
-        throw ErrorResponse.NotFound('User not found');
-      }
-      offers = bookingUtil.generateOfferPrices(offers, user.level);
-      let sum = 0;
-      offers.forEach((offer) => { sum += offer.price });
-      sum -= booking.payed;
-
-      if (sum > 0) {
-        sum = -sum;
-      }
-      await User.findOneAndUpdate({ _id: booking.user }, { $inc: { credits: sum } });
+      const { requiredCredits, user } = await getBookingClaimDetails(booking);
+      const creditsToPay = requiredCredits > 0 ? -requiredCredits : requiredCredits;
+      userCanClaim(user, booking, creditsToPay);
+      await User.findOneAndUpdate({ _id: booking.user }, { $inc: { credits: creditsToPay } });
       await Booking.findOneAndUpdate(
         {
           _id: parseInt(req.params.id),
         },
         {
           $set: { claimed: true },
-          $inc: { payed: sum },
+          $inc: { payed: creditsToPay },
         });
 
       return res.status(200).json({ message: 'Claimed' });
