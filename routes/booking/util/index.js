@@ -56,7 +56,7 @@ class BookingUtil {
     if (!place || !user || !intervalId || !chosenInterval) {
       throw ErrorResponse.BadRequest('Invalid interval');
     }
-
+    
     if (!chosenInterval.day || chosenInterval.day !== dayWeek) {
       throw ErrorResponse.BadRequest('Chosen date does not match interval');
     }

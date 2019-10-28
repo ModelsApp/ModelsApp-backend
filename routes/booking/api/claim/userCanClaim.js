@@ -22,7 +22,14 @@ const userCanClaim = (user, booking, requiredCredits) => {
   if (moment().isAfter(bookingDate)) {
     return {
       value: false,
-      message: 'Cannot claim, its too late',
+      message: "Cannot claim, it's too late",
+    }
+  }
+
+  if (moment().duration(end.diff(bookingDate)).asMinutes() > 60) {
+    return {
+      value: false,
+      message: "Cannot claim, it's too early",
     }
   }
 
