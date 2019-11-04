@@ -16,7 +16,7 @@ const userRepository = require('./routes/user/repository');
 const placeRepository = require('./routes/place/repository');
 const placeTypeRepository = require('./routes/placeType/repository');
 const placeExtraRepository = require('./routes/placeExtra/repository');
-const placeTimeFrameRepository = require('./routes/placeTimeFrame/repository');
+const placeTimeFrameRepository = require('./routes/placeServingTimeframe/repository');
 const cityRepository = require('./routes/city/repository');
 const bookingRepository = require('./routes/booking/repository');
 const intervalRepository = require('./routes/interval/repository');
@@ -213,7 +213,7 @@ async function bootstrap() {
     newPlaceTypeRepository(),
     newValidator(),
   );
-  require('./routes/placeTimeFrame')(
+  require('./routes/placeServingTimeframe')(
     app,
     newPlaceTimeFrameRepository(),
     newPlaceTypeRepository(),

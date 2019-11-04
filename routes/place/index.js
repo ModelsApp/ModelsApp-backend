@@ -104,14 +104,14 @@ module.exports = (
 
       if (validation.error) throw ErrorResponse.BadRequest(validation.error);
 
-      const { timeFrames } = req.body;
-      const validTimeFrames = (await Promise.all((req.body.type || [])
+      const { servingTimeFrames } = req.body;
+      const validServingTimeFrames = (await Promise.all((req.body.type || [])
         .map((type) => placeTimeFramesRepository.findOne({ type }))))
         .map(placeTimeFrame => placeTimeFrame.name);
 
-      if (timeFrames && !timeFramesValid(validTimeFrames, timeFrames)) {
+      if (servingTimeFrames && !timeFramesValid(validServingTimeFrames, servingTimeFrames)) {
         throw ErrorResponse
-          .BadRequest(`Invalid time frames! Valid values for types ${req.body.type} are ${validTimeFrames || '[]'}`);
+          .BadRequest(`Invalid time frames! Valid values for types ${req.body.type} are ${validServingTimeFrames || '[]'}`);
       }
 
       const place = {
@@ -151,7 +151,8 @@ module.exports = (
         isActive: true,
         access: ACCESS.basic,
         allows: Object.values(GENDERS),
-        timeFrames: req.body.timeFrames || {},
+        timeFrames: req.body.timeFrames || [],
+        servingTimeFrames: req.body.servingTimeFrames || {},
         bookingLimits: req.body.bookingLimits || {},
         bookingLimitsPeriod: req.body.bookingLimitsPeriod || BOOKING_LIMIT_PERIODS.week,
         city: req.body.city,
@@ -234,15 +235,16 @@ module.exports = (
       if (newPlace.extra) place.extra = newPlace.extra;
       if (newPlace.access) place.access = newPlace.access;
       if (newPlace.allows) place.allows = newPlace.allows;
-      if (newPlace.timeFrames) {
-        const validTimeFrames = (await Promise.all((req.body.type || [])
+      if (newPlace.timeframes) place.timeframes = newPlace.timeframes;
+      if (newPlace.servingTimeFrames) {
+        const validServingTimeFrames = (await Promise.all((req.body.type || [])
           .map((type) => placeTimeFramesRepository.findOne({ type }))))
           .map(placeTimeFrame => placeTimeFrame.name);
-        if (!timeFramesValid(validTimeFrames, newPlace.timeFrames)) {
+        if (!timeFramesValid(validServingTimeFrames, newPlace.servingTimeFrames)) {
           return res.status(400)
-            .json({ message: `Invalid time frames! Valid values for type ${newPlace.type || place.type} are ${validTimeFrames || '[]'}` });
+            .json({ message: `Invalid time frames! Valid values for type ${newPlace.type || place.type} are ${validServingTimeFrames || '[]'}` });
         }
-        place.timeFrames = newPlace.timeFrames;
+        place.servingTimeFrames = newPlace.servingTimeFrames;
       }
       if (newPlace.bookingLimits) place.bookingLimits = newPlace.bookingLimits;
       if (newPlace.bookingLimitsPeriod) place.bookingLimitsPeriod = newPlace.bookingLimitsPeriod;
@@ -456,7 +458,7 @@ module.exports = (
 
     if (timeframe && date) {
       const day = moment(date).format('dddd');
-      defaultQuery[`timeFrames.${day.toLowerCase()}`] = timeframe;
+      defaultQuery[`servingTimeFrames.${day.toLowerCase()}`] = timeframe;
     }
 
     let typologies = typology;

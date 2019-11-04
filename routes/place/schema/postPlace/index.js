@@ -37,7 +37,8 @@ const newSchema = (validTypes, validExtras, validCities, requirements) => Joi.ob
   extra: Joi.array().items(
     Joi.string().strict().valid(validExtras),
   ),
-  timeFrames: Joi.object().keys({
+  timeframes: Joi.array().items(Joi.string()),
+  servingTimeFrames: Joi.object().keys({
     monday: dayTimeFrame,
     tuesday: dayTimeFrame,
     wednesday: dayTimeFrame,

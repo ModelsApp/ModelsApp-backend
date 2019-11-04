@@ -43,7 +43,8 @@ const newSchema = (validTypes, validExtras, validCities, requirements) => Joi.ob
   ),
   access: Joi.string().strict().valid(Object.values(ACCESS)),
   allows: Joi.array().items(Joi.string().valid(Object.values(GENDERS))),
-  timeFrames: Joi.object().keys({
+  timeframes: Joi.array().items(Joi.string()),
+  servingTimeFrames: Joi.object().keys({
     monday: dayTimeFrame,
     tuesday: dayTimeFrame,
     wednesday: dayTimeFrame,

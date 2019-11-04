@@ -13,7 +13,7 @@ const getObjectId = (id) => {
   return oid;
 }
 
-const newPlaceExtraRepository = (model) => ({
+const newPlaceServingTimeframesRepository = (model) => ({
   updateOrCreate({ type, name }) {
     return new Promise((resolve, reject) => {
       model.findOneAndUpdate(
@@ -67,4 +67,4 @@ const newPlaceExtraRepository = (model) => ({
   },
 });
 
-module.exports = newPlaceExtraRepository;
+module.exports = newPlaceServingTimeframesRepository;

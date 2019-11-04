@@ -1,5 +1,5 @@
 const newPostSchema = require('./schema');
-const middleware = require('./../../config/authMiddleware');
+const middleware = require('../../config/authMiddleware');
 
 module.exports = (app, placeTimeFrameRepository, placeTypeRepository, validate) => {
   app.put('/api/place-time-frame', middleware.isAdmin, async (req, res) => {
