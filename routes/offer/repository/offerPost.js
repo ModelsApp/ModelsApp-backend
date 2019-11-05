@@ -8,7 +8,7 @@ class OfferPostRepository extends Repository {
   }
 
   findByUserId (userId, limit) {
-    const query = this.model.find({ user: userId });
+    const query = this.model.find({ user: userId, isActive: true });
     if (limit) {
       query.limit(limit);
     }

@@ -80,6 +80,9 @@ module.exports = (app, User, Place, Offer, Counter, Booking, OfferPost, Interval
 
     places = await Place.find({}).toArray();
     for (const place of places) {
+      if (Array.isArray(place.type)) {
+        continue;
+      }
       place.type = [...([place.type] || [])];
       await Place.replaceOne({ _id: place._id }, place);
     }
@@ -90,6 +93,11 @@ module.exports = (app, User, Place, Offer, Counter, Booking, OfferPost, Interval
     console.log('Migrating places...');
     await migratePlaces(Place);
     console.log('Migrations finished');
+
+    console.log('Add isActive to OfferPosts');
+    await OfferPost.updateMany({}, { $set: { isActive: true } });
+    console.log('Add isActive to samplePosts');
+    await SamplePost.updateMany({}, { $set: { isActive: true } });
 
     return res.send('done');
   });

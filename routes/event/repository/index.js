@@ -56,6 +56,7 @@ class EventRepository extends Repository {
       baseCredits,
       level,
       eventOffers,
+      isActive: true,
       createdAt: moment().utc().toISOString(),
     });
 
@@ -87,7 +88,7 @@ class EventRepository extends Repository {
 
   findActivePlaceEvent(placeId) {
     const now = moment().utc().toISOString();
-    return this.model.findOne({ placeId, 'timeframe.end': { $gte: now } });
+    return this.model.findOne({ placeId, 'timeframe.end': { $gte: now }, isActive: true });
   }
 
   findWhere({ id }) {
@@ -96,6 +97,7 @@ class EventRepository extends Repository {
       this.model.find(
         {
         ...(oid && { _id: oid }),
+        isActive: true,
         },
       ).toArray((err, events) => {
           if (err) reject(err);
@@ -109,7 +111,7 @@ class EventRepository extends Repository {
     if (!oid) {
       return null;
     }
-    return this.model.findOne({ _id: oid });
+    return this.model.findOne({ _id: oid, isActive: true });
   }
 
   deleteOne (id) {
@@ -117,7 +119,7 @@ class EventRepository extends Repository {
     if (!oid) {
       throw new Error('Wrong id!');
     }
-    return this.model.deleteOne({ _id: oid });
+    return this.model.updateOne({ _id: oid, isActive: false });
   }
 
   addPlaceOffers(id, placeOffers) {
@@ -143,7 +145,7 @@ class EventRepository extends Repository {
   }
 
   findByPlaceId(id) {
-    return this.model.find({ placeId: id }).toArray();
+    return this.model.find({ placeId: id, isActive: true }).toArray();
   }
 
   async joinRequirements(event) {

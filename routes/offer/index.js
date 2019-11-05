@@ -26,7 +26,7 @@ module.exports = (
 
       if (userID) {
         const user = parseInt(userID);
-        offer.posts = await OfferPost.find({ user: user, offer: offer._id }).toArray();
+        offer.posts = await OfferPost.find({ user: user, offer: offer._id, isActive: true }).toArray();
       }
 
       if (!offer.place) {
@@ -167,7 +167,7 @@ module.exports = (
     const actionPointsProviders = await actionPointsRepository.find();
     const offerCreditsArray = Array.from(Object.keys(credits));
 
-    const posts = await OfferPost.find({ offer: offer._id }).toArray();
+    const posts = await OfferPost.find({ offer: offer._id, isActive: true }).toArray();
 
     return offerCreditsArray.map(x => {
       const actionPoints = actionPointsProviders.find(ap => ap.provider === x);
@@ -314,9 +314,10 @@ module.exports = (
         place: parseInt(req.params.id),
         updatedTime: moment().format('DD-MM-YYYY'),
         users: [],
+        isActive: true,
       };
   
-      const post = await SamplePost.findOne({ place: samplePost.place, feedback: samplePost.feedback });
+      const post = await SamplePost.findOne({ place: samplePost.place, feedback: samplePost.feedback, isActive: true });
       if (post) {
         throw ErrorResponse.Unauthorized('The sample of the post with this review already exist');
       }
@@ -341,7 +342,7 @@ module.exports = (
     try {
       const id = parseInt(req.params.id);
 
-      const checkSample = await SamplePost.findOne({});
+      const checkSample = await SamplePost.findOne({ isActive: true });
       if (checkSample.updatedDate !== moment().format('DD-MM-YYYY')) {
         await SamplePost.updateMany({}, { $set: { updatedDate: moment().format('DD-MM-YYYY'), users: [] } });
       }
@@ -351,6 +352,7 @@ module.exports = (
         {
           place: id,
           users: { $not: { $elemMatch: { $eq: user._id } } },
+          isActive: true,
         }).toArray();
       if (posts.length === 0) throw ErrorResponse.NotFound('no samples for you');
       const post = await posts[randomInteger(0, posts.length - 1)];
@@ -392,6 +394,7 @@ module.exports = (
         place: offer.place,
         accepted: false,
         user: req.user._id,
+        isActive: true,
       };
 
       const seq = await Counter.findOneAndUpdate(
@@ -459,7 +462,8 @@ module.exports = (
       const dbOfferPost = await OfferPost.findOne({
         offer: expectedBody.offerId,
         booking: expectedBody.bookingId,
-        type: expectedBody.actionType
+        type: expectedBody.actionType,
+        isActive: true,
       });
       const bookingAction = (booking.actions || []).find(x => x.offerId === offer._id);
 
@@ -492,6 +496,7 @@ module.exports = (
         user: user._id,
         booking: booking._id,
         image: image || null,
+        isActive: true,
       };
       await OfferPost.insertOne(offerPost);
       await Place.findOneAndUpdate({ _id: offer.place }, { $push: { posts: id } });
@@ -528,7 +533,8 @@ module.exports = (
         {
           offer: parseInt(req.params.id),
           booking: bookingId,
-          type: req.body.postType
+          type: req.body.postType,
+          isActive: true,
         });
       if (dbOfferPost) throw ErrorResponse.Unauthorized('you have already done this action');
 
@@ -561,6 +567,7 @@ module.exports = (
         accepted: false,
         user: req.user._id,
         booking: booking._id,
+        isActive: true,
       };
 
       const seq = await Counter.findOneAndUpdate(
@@ -660,7 +667,7 @@ module.exports = (
   app.get('/api/offerPosts/today', async (req, res, next) => {
     try {
       const today = moment().format('DD-MM-YYYY');
-      const posts = await OfferPost.find({ creationDate: { $lte: today } }).toArray();
+      const posts = await OfferPost.find({ creationDate: { $lte: today }, isActive: true }).toArray();
   
       return res.status(200).json(posts);
     } catch (error) {
@@ -671,7 +678,7 @@ module.exports = (
   // Get all approved OfferPosts
   app.get('/api/offerPosts/approved', async (req, res, next) => {
     try {
-      const posts = await OfferPost.find({ accepted: true }).toArray();
+      const posts = await OfferPost.find({ accepted: true, isActive: true }).toArray();
       const full = await Promise.all(posts.map(async (post) => {
           post.user = await User.findOne({ _id: post.user }, { projection: { name: 1, surname: 1, photo: 1 } });
           return post;
@@ -705,11 +712,11 @@ module.exports = (
   app.get('/api/offer/post/:id', async (req, res, next) => {
     try {
       const id = parseInt(req.params.id);
-      const offerPost = await OfferPost.findOne({ _id: id });
+      const offerPost = await OfferPost.findOne({ _id: id, isActive: true });
 
       if (!offerPost) throw ErrorResponse.NotFound('no such post');
 
-      offerPost.offer = await Offer.findOne({ _id: offerPost.offer });
+      offerPost.offer = await Offer.findOne({ _id: offerPost.offer, isActive: true });
       
       return res.status(200).json(offerPost);
     } catch (error) {
@@ -721,7 +728,7 @@ module.exports = (
   app.get('/api/offer/:id/posts', async (req, res, next) => {
     try {
       const id = parseInt(req.params.id);
-      const posts = await OfferPost.find({ offer: id }).toArray();
+      const posts = await OfferPost.find({ offer: id, isActive: true }).toArray();
   
       return res.status(200).json(posts);
     } catch (error) {

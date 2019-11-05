@@ -25,6 +25,7 @@ class RideRepository extends Repository {
       arrived: false,
       stars: null,
       arrivingNotificationSent: false,
+      isActive: true,
       createdAt: moment().utc().toISOString(),
     });
 
@@ -37,7 +38,7 @@ class RideRepository extends Repository {
   }
 
   async getAllByDriver(driverId) {
-    return await this.model.find({ driver: driverId }).toArray();
+    return await this.model.find({ driver: driverId, isActive: true }).toArray();
   }
 
   async rate(id, userId, stars) {
@@ -53,12 +54,12 @@ class RideRepository extends Repository {
     if (!oid) {
       return null;
     }
-    return this.model.findOne({ _id: oid });
+    return this.model.findOne({ _id: oid, isActive: true });
   }
 
   findMany(ids) {
     const mappedIds = ids.map(id => this.getObjectId(id));
-    return this.model.find({ _id: { $in: mappedIds }}).toArray();
+    return this.model.find({ _id: { $in: mappedIds }, isActive: true}).toArray();
   }
 
   findWhere({ id, userId, pending, fromPlace, toPlace }) {
@@ -70,6 +71,7 @@ class RideRepository extends Repository {
         ...(pending && { pending }),
         ...(fromPlace !== undefined && { fromPlace }),
         ...(toPlace !== undefined && { toPlace }),
+        isActive: true,
         },
       ).toArray();
   }
@@ -83,7 +85,7 @@ class RideRepository extends Repository {
   }
 
   findExisting (user, driverRide) {
-    return this.model.find({ user, driverRide }).toArray();
+    return this.model.find({ user, driverRide, isActive: true }).toArray();
   }
 
   async updateOne (id, userId, {
@@ -133,7 +135,7 @@ class RideRepository extends Repository {
   }
 
   findCurrentDriverRides (driverId) {
-    return this.model.find({ driver: String(driverId), arrived: false }).toArray();
+    return this.model.find({ driver: String(driverId), arrived: false, isActive: true }).toArray();
   }
 
   async joinDriverRide (ride) {

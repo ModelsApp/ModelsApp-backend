@@ -7,7 +7,7 @@ module.exports = (app, User, Place, Offer, Counter, Booking, OfferPost, Interval
 
   // Get the statistics for the Wallet section in Admins page
   app.get('/api/statistics/wallet', function (req, res) {
-    OfferPost.find({ accepted: true }).toArray(function (err, posts) {
+    OfferPost.find({ accepted: true, isActive: true }).toArray(function (err, posts) {
       var counts = { instaPost: 0, instaStories: 0, fbPost: 0, tripAdvisorPost: 0, googlePlacesPost: 0 };
       var credits = 0;
       posts.forEach(function (post) {
@@ -120,7 +120,7 @@ module.exports = (app, User, Place, Offer, Counter, Booking, OfferPost, Interval
 
   // Get statistics in numbers for some type of post
   app.get('/api/statistics/res/:id/reviews/:type', function (req, res) {
-    OfferPost.find({ type: req.params.type, accepted: true, place: parseInt(req.params.id) }).toArray(function (err, posts) {
+    OfferPost.find({ type: req.params.type, accepted: true, place: parseInt(req.params.id), isActive: true }).toArray(function (err, posts) {
       var totalNum = posts.length;
       var average = 0;
       var lastweek = 0;
@@ -224,7 +224,7 @@ module.exports = (app, User, Place, Offer, Counter, Booking, OfferPost, Interval
 
   // The data for the content Full record section of Admins page
   app.get('/api/statistics/content/full', function (req, res) {
-    OfferPost.find({ accepted: true }).toArray(async function (err, posts) {
+    OfferPost.find({ accepted: true, isActive: true }).toArray(async function (err, posts) {
       var full = await Promise.all(posts.map(async function (post) {
         post.user = await User.findOne({_id: post.user}, {projection: {name: 1, surname: 1, photo: 1}});
         return post;
@@ -242,7 +242,7 @@ module.exports = (app, User, Place, Offer, Counter, Booking, OfferPost, Interval
     if(!id) {
       res.json({ message: "No such place" });
     } else {
-      OfferPost.find({ place: id, creationDate: today }).toArray(async function (err, posts) {
+      OfferPost.find({ place: id, creationDate: today, isActive: true }).toArray(async function (err, posts) {
         var full = await Promise.all(posts.map(async function (post) {
           post.user = await User.findOne({ _id: post.user }, { projection: { name: 1, surname: 1, photo: 1 }});
           return post;
@@ -258,7 +258,7 @@ module.exports = (app, User, Place, Offer, Counter, Booking, OfferPost, Interval
     if(!id) {
       res.json({ message: "No such place" });
     } else {
-      OfferPost.find({ place: id, creationDate: date }).toArray(async function (err, posts) {
+      OfferPost.find({ place: id, creationDate: date, isActive: true }).toArray(async function (err, posts) {
         var full = await Promise.all(posts.map(async function (post) {
           post.user = await User.findOne({ _id: post.user }, { projection: { name: 1, surname: 1, photo: 1 }});
           return post;

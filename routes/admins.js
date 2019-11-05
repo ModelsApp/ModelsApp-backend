@@ -86,7 +86,7 @@ module.exports = (app, User, Place, Offer, OfferPost, Booking, OfferPostArchive)
   app.put('/api/admin/acceptOfferPost/:id', middleware.isAdmin, function (req, res) {
     var id = parseInt(req.params.id);
 
-    OfferPost.findOne({ _id: id }, function (err, offerPost) {
+    OfferPost.findOne({ _id: id, isActive: true }, function (err, offerPost) {
       if(err) res.json({ message: "error" });
       if(!offerPost){
         res.json({ message: "No such offer post" });
@@ -122,7 +122,7 @@ module.exports = (app, User, Place, Offer, OfferPost, Booking, OfferPostArchive)
     var id = parseInt(req.params.id);
     var approvementLink = req.body.approvementLink;
     //find post action in db
-    OfferPost.findOne({ _id: id })
+    OfferPost.findOne({ _id: id, isActive: true })
       .then(offerPost => {
         if(!offerPost.accepted){
           User.findOneAndUpdate({ _id: offerPost.user }, { $inc: { credits: offerPost.credits } })
@@ -155,7 +155,7 @@ module.exports = (app, User, Place, Offer, OfferPost, Booking, OfferPostArchive)
   app.put('/api/admin/offerpost/:id/reject', async (req,res)=> {
     var id = parseInt(req.params.id);
     //find post action in db
-    OfferPost.findOne({ _id: id })
+    OfferPost.findOne({ _id: id, isActive: true })
       .then(async offerPost => {
         if(offerPost.accepted){
           res.status(400).json({message: 'action arleady accepted'});

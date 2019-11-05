@@ -265,7 +265,7 @@ module.exports = (
       const bookings = await Booking.find({ user: id }).toArray();
       const full = await Promise.all(bookings.map(async (booking) => {
         booking.place = await Place.findOne(
-          { _id: booking.place },
+          { _id: booking.place, isActive: true },
           { projection:
             { name: 1,
               address: 1,

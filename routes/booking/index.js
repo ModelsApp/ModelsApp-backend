@@ -425,7 +425,7 @@ module.exports = (app, placeRepository, userRepository, bookingRepository, event
           projection: { _id: 1 },
         }).toArray();
 
-      const place = await Place.findOne({ _id: id }, { slots: 1 });
+      const place = await Place.findOne({ _id: id, isActive: true }, { slots: 1 });
       
       if (!place) {
         throw ErrorResponse.NotFound('No such place');

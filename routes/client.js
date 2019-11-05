@@ -8,7 +8,7 @@ module.exports = (app, User, Place, Offer, Counter, Booking, OfferPost, Interval
     var id = req.user._id;
     var newPlace = req.body.place;
 
-    Place.findOne({_id: id }, function (err, place) {
+    Place.findOne({ _id: id }, function (err, place) {
       err && console.log(err);
       if(!place) {
         res.json({ message: "No such place" });
@@ -64,7 +64,7 @@ module.exports = (app, User, Place, Offer, Counter, Booking, OfferPost, Interval
 
   app.get('/api/client', middleware.isClient, function (req, res) {
     var id = req.user._id;
-    Place.findOne({ _id: id }, { projection: { 'client.password': 0 }}, async function (err, place) {
+    Place.findOne({ _id: id, isActive: true }, { projection: { 'client.password': 0 }}, async function (err, place) {
       place.intervals = await Interval.findOne({ _id: place.intervals });
       res.json(place);
     });
@@ -80,13 +80,13 @@ module.exports = (app, User, Place, Offer, Counter, Booking, OfferPost, Interval
   app.get('/api/client/samples', middleware.isClient, function (req, res) {
     var id = req.user._id;
 
-    SamplePost.findOne({}, function (err, checkSample) {
+    SamplePost.findOne({ isActive: true }, function (err, checkSample) {
       if(checkSample.updatedDate !== moment().format('DD-MM-YYYY')) {
         SamplePost.updateMany({}, { $set: { updatedDate: moment().format('DD-MM-YYYY'), users: [] }});
       }
     });
 
-    SamplePost.find({ place: id }).toArray(function (err, samples) {
+    SamplePost.find({ place: id, isActive: true }).toArray(function (err, samples) {
       res.json(samples);
     });
   });
@@ -98,11 +98,11 @@ module.exports = (app, User, Place, Offer, Counter, Booking, OfferPost, Interval
 
   app.delete('/api/client', middleware.isClient, function (req, res) {
     var id = req.user._id;
-    Place.deleteOne({ _id: id });
-    Offer.updateMany({ place: id }, { $set: { place: null }});
-    Booking.updateMany({ place: id }, { $set: { place: null }});
-    OfferPost.updateMany({ place: id }, { $set: { place: null }});
-    SamplePost.deleteMany({ place: id });
+    Place.updateOne({ _id: id }, { $set: { isActive: false }});
+    Offer.updateMany({ place: id }, { $set: { isActive: false }});
+    Booking.updateMany({ place: id }, { $set: { isActive: false }});
+    OfferPost.updateMany({ place: id }, { $set: { isActive: false }});
+    SamplePost.updateMany({ place: id }, { $set: { isActive: false } });
     res.json({ message: "Deleted" });
   });
 };

@@ -426,7 +426,7 @@ module.exports = (
       const limit = parseInt(req.params.limit);
       const offset = parseInt(req.params.offset);
       const places = await Place.find(
-        {},
+        { isActive: true },
         { projection: { client: 0 } },
         ).skip((offset - 1) * limit)
         .limit(limit)
@@ -560,18 +560,18 @@ module.exports = (
   app.delete('/api/place/:id', async (req, res, next) => {
     try {
       const id = parseInt(req.params.id);
-      const place = await Place.findOne({ _id: id });
+      const place = await Place.findOne({ _id: id, isActive: true });
       if (!place) throw ErrorResponse.NotFound('Place not found');
 
       const events = await eventRepository.findByPlaceId(id);
       for (const event of events) {
         await deleteEvent(event._id);
       }
-      await Place.deleteOne({ _id: id });
-      await Offer.deleteMany({ place: id });
-      await Booking.deleteMany({ place: id });
-      await OfferPost.deleteMany({ place: id });
-      await SamplePost.deleteMany({ place: id });
+      await Place.updateOne({ _id: id }, { $set : { isActive: false } });
+      await Offer.updateMany({ place: id }, { $set : { isActive: false } });
+      await Booking.updateMany({ place: id }, { $set : { closed: true } });
+      await OfferPost.updateMany({ place: id }, { $set : { isActive: false } });
+      await SamplePost.updateMany({ place: id }, { $set: { isActive: false } });
       return res.json({ message: "Deleted" });
     } catch (error) {
       return next(error);
@@ -719,7 +719,7 @@ module.exports = (
       if (!placeId) throw ErrorResponse.BadRequest('placeId is required');
       if (!bookingId) throw ErrorResponse.BadRequest('bookingId is required');
 
-      const place = await Place.findOne({ _id: placeId });
+      const place = await Place.findOne({ _id: placeId, isActive: true });
       const booking = await Booking.findOne({ _id: bookingId });
       const interval = await Interval.findOne({ place: placeId });
 

@@ -31,7 +31,7 @@ module.exports = (app, Place, SamplePosts, getNewId) => {
         let feedback = req.body.feedback;
         let place = parseInt(req.body.place);
         if(place && feedback){
-            let dbPlace = await Place.findOne({ _id : place });
+            let dbPlace = await Place.findOne({ _id : place, isActive: true });
             if(dbPlace){
                 let newSamplePost = {
                     _id: await getNewId('samplepostid'),

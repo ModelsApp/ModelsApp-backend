@@ -42,7 +42,7 @@ class BookingUtil {
       throw ErrorResponse.BadRequest('Invalid parameters');
     }
     const dayWeek = date.format('dddd');
-    const place = await this.Place.findOne({ _id : id });
+    const place = await this.Place.findOne({ _id : id, isActive: true });
     const user = await this.User.findOne({_id : userID });
     let offers = await this.Offer.find({ place: id, isActive: true }).toArray();
     if (!omitLimits && !this.placeAllowsUserGender(place, user)) {

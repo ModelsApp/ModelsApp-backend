@@ -28,6 +28,7 @@ class EventBookingRepository extends Repository {
       rides: [],
       bookings: bookings || [],
       rideChanges: 0,
+      isActive: true,
       createdAt: moment().utc().toISOString(),
     });
 
@@ -39,7 +40,7 @@ class EventBookingRepository extends Repository {
     if (!oid) {
       throw new Error('Wrong id!');
     }
-    return this.model.deleteOne({ _id: oid });
+    return this.model.updateOne({ _id: oid }, { $set: { isActive: false }});
   }
 
   async updateOne(id, { bookings }) {
@@ -86,6 +87,7 @@ class EventBookingRepository extends Repository {
         {
         ...(oid && { _id: oid }),
         ...(userId && { userId }),
+        isActive: true,
         },
       ).toArray((err, events) => {
           if (err) reject(err);
@@ -99,11 +101,11 @@ class EventBookingRepository extends Repository {
     if (!oid) {
       return null;
     }
-    return this.model.findOne({ _id: oid });
+    return this.model.findOne({ _id: oid, isActive: true });
   }
 
   findByEventId(id) {
-    return this.model.find({ eventId: id }).toArray();
+    return this.model.find({ eventId: id, isActive: true }).toArray();
   }
 
   addRide(id, ride) {
@@ -127,7 +129,7 @@ class EventBookingRepository extends Repository {
   }
 
   findAllForUser(userId) {
-    return this.model.find({ userId }).toArray();
+    return this.model.find({ userId, isActive: true }).toArray();
   }
 
   async joinEvent(eventBooking) {
