@@ -2,7 +2,7 @@ var passport = require('passport');
 
 module.exports = {
   isAuthorized: function (req, res, next) {
-    return passport.authenticate('jwt', { session: false }, function (err, user) {
+    return passport.authenticate('jwt', { session: false }, function (err, user, info) {
       if (err) return next(err);
       if (!user){
         res.status(403).json({ message: "Not authenticated" });

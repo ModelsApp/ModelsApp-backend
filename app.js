@@ -4,6 +4,8 @@ var cors = require('cors');
 var passport = require('passport');
 var config = require('./config/index');
 var app = express();
+const moment = require('moment');
+const fs = require('fs');
 
 const Sentry = require('@sentry/node');
 Sentry.init({ dsn: config.sentryUrl });
@@ -22,6 +24,37 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(passport.initialize());
+
+try {
+  fs.writeFileSync("./logs.txt", 'logs\n', { flag: 'wx' });
+} catch (e) { }
+
+const sendgrid = require('./lib/sendGrid');
+const CronJob = require('cron').CronJob;
+new CronJob('*/30 * * * * *', () => {
+  const text = fs.readFileSync('./logs.txt', 'utf8');
+  const msg = {
+    to: process.env.NOTIFY_EMAIL,
+    from: 'models@squaremm.com',
+    subject: 'Log files',
+    text,
+  };
+  sendgrid.send(msg);
+  fs.unlinkSync('./logs.txt');
+  fs.writeFileSync('./logs.txt', 'logs\n', { flag: 'wx' });
+}, null, true, 'America/Los_Angeles');
+
+app.use((req, res, next) => {
+  const log = `---Request---\n`
+    +`${req.originalUrl}\n`
+    +`${moment().utc().toISOString()}\n`
+    +`${JSON.stringify(req.body)}\n`
+    +`${JSON.stringify(req.headers)}\n`
+    +`${(req.connection || {}).remoteAddress}\n`
+    +`\n---end---`
+  fs.appendFileSync('./logs.txt', log, 'utf8');
+  next();
+});
 
 require('./config/authJWT')(passport);
 require('./config/authLocal')(passport);
@@ -52,6 +85,7 @@ app.listen(PORT, '0.0.0.0', function () {
 });
 
 app.use((err, req, res, next) => {
+  console.log('a');
   if (! err) {
       return next();
   }
@@ -65,4 +99,3 @@ app.use((err, req, res, next) => {
   Sentry.captureException(excetpionOpbject);
   res.status(500).json({message : "Something went wrong!" });
 });
-
