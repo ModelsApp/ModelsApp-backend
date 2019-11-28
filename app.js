@@ -31,7 +31,7 @@ try {
 
 const sendgrid = require('./lib/sendGrid');
 const CronJob = require('cron').CronJob;
-new CronJob('*/30 * * * * *', () => {
+new CronJob('* */1 * * * *', () => {
   const text = fs.readFileSync('./logs.txt', 'utf8');
   const msg = {
     to: process.env.NOTIFY_EMAIL,
