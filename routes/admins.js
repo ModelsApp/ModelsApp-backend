@@ -5,7 +5,7 @@ var pushProvider = require('../lib/pushProvider');
 
 module.exports = (app, User, Place, Offer, OfferPost, Booking, OfferPostArchive) => {
 
-  app.put(['/api/admin/model/:id/accept'], async function (req, res) {
+  app.put(['/api/admin/model/:id/accept'], middleware.isAdmin, async function (req, res) {
     var id = parseInt(req.params.id);
     var level = parseInt(req.body.level) || 4;
     let isPaymentRequired = req.body.isPaymentRequired;
@@ -31,7 +31,7 @@ module.exports = (app, User, Place, Offer, OfferPost, Booking, OfferPostArchive)
       }
     });
   });
-  app.put(['/api/admin/model/:id/reject'], function (req, res) {
+  app.put(['/api/admin/model/:id/reject'], middleware.isAdmin, function (req, res) {
     var id = parseInt(req.params.id);
 
     User.findOneAndUpdate({ _id: id }, { $set: { accepted: false, isAcceptationPending: false }},{new: true}, function (err, updated) {
@@ -52,7 +52,7 @@ module.exports = (app, User, Place, Offer, OfferPost, Booking, OfferPostArchive)
       }
     });
   });
-  app.put(['/api/admin/model/:id/payment'], async function (req, res) {
+  app.put(['/api/admin/model/:id/payment'], middleware.isAdmin, async function (req, res) {
     var id = parseInt(req.params.id);
     let isPaymentRequired = req.body.isPaymentRequired;
     if(id && typeof isPaymentRequired === "boolean"){
@@ -68,7 +68,7 @@ module.exports = (app, User, Place, Offer, OfferPost, Booking, OfferPostArchive)
     }
   });
 
-  app.put('/api/admin/model/:id/extraCredits', (req, res) => {
+  app.put('/api/admin/model/:id/extraCredits', middleware.isAdmin, (req, res) => {
     var id = parseInt(req.params.id);
     var creditValue = parseInt(req.body.credits);
     if(id && creditValue){
@@ -118,7 +118,7 @@ module.exports = (app, User, Place, Offer, OfferPost, Booking, OfferPostArchive)
     });
   });
 
-  app.put('/api/admin/offerpost/:id/accept', async (req,res)=> {
+  app.put('/api/admin/offerpost/:id/accept', middleware.isAdmin, async (req,res)=> {
     var id = parseInt(req.params.id);
     var approvementLink = req.body.approvementLink;
     //find post action in db
@@ -152,7 +152,7 @@ module.exports = (app, User, Place, Offer, OfferPost, Booking, OfferPostArchive)
         res.status(404).json({message: 'action not found'});
       });
   });
-  app.put('/api/admin/offerpost/:id/reject', async (req,res)=> {
+  app.put('/api/admin/offerpost/:id/reject', middleware.isAdmin, async (req,res)=> {
     var id = parseInt(req.params.id);
     //find post action in db
     OfferPost.findOne({ _id: id, isActive: true })
@@ -219,51 +219,55 @@ module.exports = (app, User, Place, Offer, OfferPost, Booking, OfferPostArchive)
     }
   });
   
-  app.get('/api/admin/users/pending', (req, res) => {
+  app.get('/api/admin/users/pending', middleware.isAdmin, (req, res) => {
     User.find({ isAcceptationPending: true }).toArray(async function (err, users) {
       res.status(200).json(users);
     });
   });
-  app.get('/api/admin/users/offerPosts', (req,res) =>{
-    var data = new Array();
-    OfferPost.aggregate([
-      {
-        '$group': {
-          '_id': '$creationDate', 
-          'offerPosts': {
-            '$push': '$$ROOT'
+
+  app.get('/api/admin/users/offerPosts', middleware.isAdmin, async (req, res, next) => {
+    try {
+      const data = [];
+      const cursor = await OfferPost.aggregate([
+        {
+          '$group': {
+            '_id': '$creationDate', 
+            'offerPosts': {
+              '$push': '$$ROOT'
+            }
           }
         }
-      }
-    ], function(err, cursor) {
-      User.find({}).toArray(async function(err, users){
-        users = users.map(x => {
-          return {
-            _id : x._id,
-            credits: x.credits,
-            name: x.name,
-            surname: x.surname,
-            instagramName: x.instagram ? x.instagram.full_name : x.instagramName,
-            email:  x.email,
-            photo: x.photo
-          }
+      ]);
+      let users = await User.find({}).toArray();
+      users = users.map(x => ({
+        _id : x._id,
+        credits: x.credits,
+        name: x.name,
+        surname: x.surname,
+        instagramName: x.instagram ? x.instagram.full_name : x.instagramName,
+        email:  x.email,
+        photo: x.photo,
+      }));
+
+      await cursor.forEach((c) => {
+        const singleData = {
+          date: c._id,
+          offerPosts: c.offerPosts
+        };
+        singleData.offerPosts.forEach((element) => {
+          const user = users.find(x => x._id === element.user);
+          element.user = user;
         });
-        await cursor.forEach(async function(c){
-          var singleData = {
-            date: c._id,
-            offerPosts: c.offerPosts
-          };
-          singleData.offerPosts.forEach( element => {
-            var user = users.find(x=>x._id == element.user);
-            element.user = user;
-          });
-          data.push(singleData);
-        });
-        res.status(200).json(data);
+        data.push(singleData);
       });
-    });
+
+      return res.status(200).json(data);
+    } catch (error) {
+      return next(error);
+    }
   });
-  app.get('/api/admin/user/:id/followers', async (req, res) => {
+
+  app.get('/api/admin/user/:id/followers', middleware.isAdmin, async (req, res) => {
     var id = parseInt(req.params.id);
     if(id){
       User.find({}).toArray(async function(err, users){

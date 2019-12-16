@@ -114,7 +114,7 @@ module.exports = (
   });
 
   // Get specific user
-  app.get('/api/user/:id', async (req, res, next) => {
+  app.get('/api/user/:id', middleware.isAdmin, async (req, res, next) => {
     try {
       const id = parseInt(req.params.id);
       const user = await User.findOne({ _id: id });
@@ -130,13 +130,20 @@ module.exports = (
   });
   
   // Get Users by specific query
-  app.get('/api/user', async (req, res, next) => {
+  app.get('/api/user', middleware.isAdmin, async (req, res, next) => {
     try {
+      const { limit = 10, page = 1 } = req.query;
       const query = {};
       if(req.body.id) query._id = parseInt(req.body.id);
       if(req.body.name) query.name = req.body.name;
   
-      const users = await User.find(query).toArray();
+      const users = await User
+        .find(query)
+        .skip(limit*(page+1))
+        .limit(limit)
+        .sort({ _id: -1 })
+        .toArray();
+
       if (!users.length) {
         return res.status(404).json({ message: "No users found" });
       }
@@ -149,7 +156,7 @@ module.exports = (
 
   // Delete specific User
   // not handle flag anywhere in system
-  app.delete('/api/user/:id', async (req, res, next) => {
+  app.delete('/api/user/:id', middleware.isAdmin, async (req, res, next) => {
     try {
       const user = await User.findOneAndUpdate({ _id: parseInt(req.params.id) }, { $set: { deleted: true } });
       if (!user) {
